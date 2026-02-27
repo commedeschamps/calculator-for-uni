@@ -1,4 +1,4 @@
-# Campus Suite (Next.js + React + TypeScript)
+# Helper (Next.js + React + TypeScript)
 
 University-focused calculator workspace built with Next.js App Router, React, and TypeScript.
 

@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import PageLayout from '../components/PageLayout';
+import { useToast } from '../components/ToastProvider';
+import { usePersistedState } from '../lib/usePersistedState';
 import {
   calculateSyllabusCourseResult,
   createSyllabusCourse,
@@ -16,6 +18,12 @@ import {
   type SyllabusCourse,
   type SyllabusSection,
 } from '../lib/academic';
+import {
+  type SyllabusTemplate,
+  SYLLABUS_TEMPLATES,
+  getBaseTemplates,
+  getElectivePairs,
+} from '../lib/syllabusTemplates';
 
 type CourseViewModel = {
   course: SyllabusCourse;
@@ -28,6 +36,64 @@ type CourseViewModel = {
   statusTone: StatusTone;
   sectionMetrics: Map<string, { average: number; contribution: number; gradedItems: number; totalItems: number }>;
 };
+
+function detectItemPrefix(sectionTitle: string): string {
+  const normalized = sectionTitle.trim().toLowerCase();
+  if (normalized.includes('quiz')) return 'Quiz';
+  if (normalized.includes('midterm')) return 'Midterm';
+  if (normalized.includes('endterm') || normalized.includes('final')) return 'Endterm';
+  if (normalized.includes('report')) return 'Report';
+  return 'Assignment';
+}
+
+function nextItemLabel(sectionTitle: string, itemCount: number): string {
+  const prefix = detectItemPrefix(sectionTitle);
+  const nextIndex = itemCount + 1;
+  return `${prefix} ${nextIndex}`;
+}
+
+function normalizeLegacyLabs(courses: SyllabusCourse[]): SyllabusCourse[] {
+  let changed = false;
+
+  const normalized = courses.map((course) => {
+    const normalizedSections = course.sections.map((section) => {
+      const sectionIsLab = /\blab(s)?\b/i.test(section.title);
+      const title = sectionIsLab ? 'Assignments' : section.title;
+      if (title !== section.title) {
+        changed = true;
+      }
+
+      const items = section.items.map((item) => {
+        const updatedTitle = item.title.replace(/^lab\s*(\d+)$/i, 'Assignment $1');
+        if (updatedTitle !== item.title) {
+          changed = true;
+        }
+        return updatedTitle === item.title ? item : { ...item, title: updatedTitle };
+      });
+
+      if (title === section.title && items === section.items) {
+        return section;
+      }
+
+      return {
+        ...section,
+        title,
+        items,
+      };
+    });
+
+    if (normalizedSections === course.sections) {
+      return course;
+    }
+
+    return {
+      ...course,
+      sections: normalizedSections,
+    };
+  });
+
+  return changed ? normalized : courses;
+}
 
 function buildStatus(total: number, hasWeightMismatch: boolean): { text: string; tone: StatusTone } {
   if (hasWeightMismatch) {
@@ -51,7 +117,7 @@ function buildStatus(total: number, hasWeightMismatch: boolean): { text: string;
     };
   }
 
-  if (total >= PASSING_THRESHOLD) {
+  if (total > PASSING_THRESHOLD) {
     return {
       text: 'Course is passed.',
       tone: 'ok',
@@ -65,8 +131,68 @@ function buildStatus(total: number, hasWeightMismatch: boolean): { text: string;
 }
 
 export default function SyllabusPage() {
-  const [courses, setCourses] = useState<SyllabusCourse[]>([createSyllabusCourse(1)]);
-  const [nextCourseId, setNextCourseId] = useState(2);
+  const [courses, setCourses] = usePersistedState<SyllabusCourse[]>('syl-courses', []);
+  const [nextCourseId, setNextCourseId] = usePersistedState('syl-nextId', 1);
+  const [selectedKeys, setSelectedKeys] = usePersistedState<string[]>('syl-selected-templates', []);
+  const [pickerOpen, setPickerOpen] = useState(courses.length === 0);
+
+  const selectedTemplates = useMemo(() => new Set(selectedKeys), [selectedKeys]);
+
+  const toggleTemplate = useCallback((key: string) => {
+    setSelectedKeys((prev) => {
+      const s = new Set(prev);
+      if (s.has(key)) { s.delete(key); } else { s.add(key); }
+      return Array.from(s);
+    });
+  }, [setSelectedKeys]);
+
+  const BASE_TEMPLATES = useMemo(() => getBaseTemplates(), []);
+  const ELECTIVE_PAIRS = useMemo(() => getElectivePairs(), []);
+
+  useEffect(() => {
+    setCourses((prev) => normalizeLegacyLabs(prev));
+  }, [setCourses]);
+
+  const totalCredits = useMemo(() => {
+    let sum = 0;
+    for (const t of SYLLABUS_TEMPLATES) {
+      if (selectedTemplates.has(t.key)) sum += t.credits;
+    }
+    return sum;
+  }, [selectedTemplates]);
+
+  function templateToCourse(template: SyllabusTemplate, id: number): SyllabusCourse {
+    return {
+      id,
+      title: `${template.name} (${template.credits} cr.)`,
+      sections: template.sections.map((s) =>
+        createSyllabusSection(s.title, s.weight, s.items),
+      ),
+    };
+  }
+
+  function handleLoadTemplates() {
+    const templates = SYLLABUS_TEMPLATES.filter((t) => selectedTemplates.has(t.key));
+    if (templates.length === 0) return;
+
+    // Only add templates that aren't already loaded (by name match)
+    const existingNames = new Set(courses.map((c) => c.title));
+    const toAdd = templates.filter((t) => !existingNames.has(`${t.name} (${t.credits} cr.)`));
+
+    if (toAdd.length === 0) {
+      showToast('All selected templates are already loaded');
+      return;
+    }
+
+    let id = nextCourseId;
+    const newCourses = toAdd.map((t) => templateToCourse(t, id++));
+    setCourses((prev) => [...prev, ...newCourses]);
+    setNextCourseId(id);
+    setPickerOpen(false);
+    showToast(`Added ${newCourses.length} course template${newCourses.length > 1 ? 's' : ''}`);
+  }
+
+  const { showToast } = useToast();
 
   const courseView = useMemo<CourseViewModel[]>(
     () =>
@@ -125,7 +251,13 @@ export default function SyllabusPage() {
   }
 
   function handleRemoveCourse(courseId: number) {
+    const removed = courses.find((c) => c.id === courseId);
     setCourses((prev) => prev.filter((course) => course.id !== courseId));
+    if (removed) {
+      showToast(`Removed "${removed.title || 'Course'}"`, () => {
+        setCourses((prev) => [...prev, removed]);
+      });
+    }
   }
 
   function handleAddSection(courseId: number) {
@@ -133,7 +265,7 @@ export default function SyllabusPage() {
       ...course,
       sections: [
         ...course.sections,
-        createSyllabusSection(`Section ${course.sections.length + 1}`, '0', [`Item ${course.sections.length + 1}.1`]),
+        createSyllabusSection(`Assignments ${course.sections.length + 1}`, '0', ['Assignment 1']),
       ],
     }));
   }
@@ -154,7 +286,7 @@ export default function SyllabusPage() {
   function handleAddItem(courseId: number, sectionId: string) {
     updateSection(courseId, sectionId, (section) => ({
       ...section,
-      items: [...section.items, createSyllabusItem(`Item ${section.items.length + 1}`)],
+      items: [...section.items, createSyllabusItem(nextItemLabel(section.title, section.items.length))],
     }));
   }
 
@@ -176,13 +308,72 @@ export default function SyllabusPage() {
       title="Syllabus Builder"
       description="Create weighted grading templates per course and track your results."
     >
-      <div className="actions">
-        <button className="btn btn-primary" type="button" onClick={handleAddCourse}>
-          Add Course Template
+      <div className="actions" style={{ gap: 8 }}>
+        <button className="btn btn-primary" type="button" onClick={() => setPickerOpen((p) => !p)}>
+          {pickerOpen ? 'Hide Templates' : 'Subject Templates'}
+        </button>
+        <button className="btn btn-muted" type="button" onClick={handleAddCourse}>
+          + Blank Course
         </button>
       </div>
 
+      {pickerOpen && (
+        <div className="card template-picker">
+          <h2 className="template-picker__title">Pick your subjects</h2>
+          <p className="template-picker__sub">SE-2411 · Term 6 · Select then load</p>
+
+          <div className="template-picker__group">
+            <span className="template-picker__label">Core</span>
+            {BASE_TEMPLATES.map((t) => (
+              <label key={t.key} className={`template-chip${selectedTemplates.has(t.key) ? ' template-chip--active' : ''}`}>
+                <input type="checkbox" checked={selectedTemplates.has(t.key)} onChange={() => toggleTemplate(t.key)} />
+                <span className="template-chip__name">{t.name}</span>
+                <span className="template-chip__credits">{t.credits} cr.</span>
+              </label>
+            ))}
+          </div>
+
+          {ELECTIVE_PAIRS.map(({ pair, label, templates }) => (
+            <div key={pair} className="template-picker__group">
+              <span className="template-picker__label">{label} <span className="template-picker__hint">pick one</span></span>
+              {templates.map((t) => (
+                <label key={t.key} className={`template-chip template-chip--elective${selectedTemplates.has(t.key) ? ' template-chip--active' : ''}`}>
+                  <input type="checkbox" checked={selectedTemplates.has(t.key)} onChange={() => toggleTemplate(t.key)} />
+                  <span className="template-chip__name">{t.name}</span>
+                  <span className="template-chip__credits">{t.credits} cr.</span>
+                </label>
+              ))}
+            </div>
+          ))}
+
+          <div className="template-picker__footer">
+            <span className="template-picker__total">
+              {selectedTemplates.size} subject{selectedTemplates.size !== 1 ? 's' : ''} · {totalCredits} credits
+            </span>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={handleLoadTemplates}
+              disabled={selectedTemplates.size === 0}
+            >
+              Load Templates
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="syllabus-list">
+        {courseView.length === 0 && !pickerOpen && (
+          <div className="card syllabus-empty">
+            <span className="syllabus-empty__icon">📋</span>
+            <p className="syllabus-empty__text">No courses yet</p>
+            <p className="syllabus-empty__hint">Use Subject Templates to load your term courses, or add a blank one.</p>
+            <div className="syllabus-empty__actions">
+              <button className="btn btn-primary" type="button" onClick={() => setPickerOpen(true)}>Open Templates</button>
+              <button className="btn btn-muted" type="button" onClick={handleAddCourse}>+ Blank Course</button>
+            </div>
+          </div>
+        )}
         {courseView.map((entry) => (
           <article className="card syllabus-card" key={entry.course.id}>
             <div className="syllabus-course-header">
@@ -316,6 +507,23 @@ export default function SyllabusPage() {
                         </span>
                       </div>
                     </div>
+
+                    {(() => {
+                      const graded = metrics?.gradedItems ?? 0;
+                      const total = metrics?.totalItems ?? section.items.length;
+                      const pct = total > 0 ? Math.round((graded / total) * 100) : 0;
+                      return (
+                        <div className="progress-bar-container">
+                          <div className="progress-bar">
+                            <div
+                              className={`progress-bar-fill${pct === 100 ? ' complete' : ''}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="progress-bar-label">{pct}%</span>
+                        </div>
+                      );
+                    })()}
                   </section>
                 );
               })}

@@ -1,6 +1,7 @@
 export const COURSE_TERM_WEIGHT = 0.6;
 export const COURSE_FINAL_WEIGHT = 0.4;
 export const PASSING_THRESHOLD = 50;
+export const PASSING_TARGET_TOTAL = 50.1;
 export const SCHOLARSHIP_THRESHOLD = 70;
 export const HIGH_SCHOLARSHIP_THRESHOLD = 90;
 export const FX_MIN_EXCLUSIVE = 25;
@@ -123,10 +124,14 @@ export function getRequiredFinalForTarget(regTerm: number, targetScore: number):
   }
 
   if (requiredFinal === FX_MAX_EXCLUSIVE && finalByTotalFormula <= FX_MAX_EXCLUSIVE) {
-    return `${formatScore(FX_MAX_EXCLUSIVE, 1)} (FX-safe minimum)`;
+    return `${formatScore(FX_MAX_EXCLUSIVE, 1)} (retake-safe minimum)`;
   }
 
   return formatScore(requiredFinal, 1);
+}
+
+export function getRequiredFinalForPassing(regTerm: number): string {
+  return getRequiredFinalForTarget(regTerm, PASSING_TARGET_TOTAL);
 }
 
 export function getLetterGradeInfo(totalScore: number | null): LetterGradeInfo | null {

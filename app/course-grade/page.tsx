@@ -1,7 +1,11 @@
 'use client';
 
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, type ChangeEvent } from 'react';
+import AnimatedNumber from '../components/AnimatedNumber';
+import CopyButton from '../components/CopyButton';
 import PageLayout from '../components/PageLayout';
+import { useToast } from '../components/ToastProvider';
+import { usePersistedState } from '../lib/usePersistedState';
 import {
   calculateCourseTotal,
   calculateRegTerm,
@@ -9,6 +13,7 @@ import {
   FX_MAX_EXCLUSIVE,
   FX_MIN_EXCLUSIVE,
   getLetterGradeInfo,
+  getRequiredFinalForPassing,
   getRequiredFinalForTarget,
   HIGH_SCHOLARSHIP_THRESHOLD,
   isPercentage,
@@ -50,8 +55,8 @@ function deriveStatus(
   if (finalScoreNumber > FX_MIN_EXCLUSIVE && finalScoreNumber < FX_MAX_EXCLUSIVE) {
     return { text: 'FX status: Final is between 25 and 50 (paid retake exam).', tone: 'warn' };
   }
-  if (total < PASSING_THRESHOLD) {
-    return { text: 'Not passed: total score is below 50.', tone: 'warn' };
+  if (total <= PASSING_THRESHOLD) {
+    return { text: 'Not passed: total score must be above 50.', tone: 'warn' };
   }
   if (total >= HIGH_SCHOLARSHIP_THRESHOLD) {
     return { text: 'Passed. Eligible for high scholarship (≥ 90).', tone: 'ok' };
@@ -59,15 +64,17 @@ function deriveStatus(
   if (total >= SCHOLARSHIP_THRESHOLD) {
     return { text: 'Passed. Eligible for scholarship (≥ 70).', tone: 'ok' };
   }
-  return { text: 'Passed the course (≥ 50).', tone: 'ok' };
+  return { text: 'Passed the course (> 50).', tone: 'ok' };
 }
 
 export default function CourseGradePage() {
-  const [regMid, setRegMid] = useState('');
-  const [regEnd, setRegEnd] = useState('');
-  const [regTermInput, setRegTermInput] = useState('');
-  const [finalScore, setFinalScore] = useState('');
-  const [manualTotal, setManualTotal] = useState('');
+  const [regMid, setRegMid] = usePersistedState('cg-regMid', '');
+  const [regEnd, setRegEnd] = usePersistedState('cg-regEnd', '');
+  const [regTermInput, setRegTermInput] = usePersistedState('cg-regTerm', '');
+  const [finalScore, setFinalScore] = usePersistedState('cg-final', '');
+  const [manualTotal, setManualTotal] = usePersistedState('cg-total', '');
+
+  const { showToast } = useToast();
 
   const regMidNumber = parseInputValue(regMid);
   const regEndNumber = parseInputValue(regEnd);
@@ -79,7 +86,7 @@ export default function CourseGradePage() {
   const regTerm = isPercentage(regTermManualNumber) ? regTermManualNumber : regTermFromFormula;
   const regTermInputError = regTermInput.trim() !== '' && !isPercentage(regTermManualNumber);
 
-  const requiredPass = regTerm === null ? '-' : getRequiredFinalForTarget(regTerm, PASSING_THRESHOLD);
+  const requiredPass = regTerm === null ? '-' : getRequiredFinalForPassing(regTerm);
   const requiredScholar = regTerm === null ? '-' : getRequiredFinalForTarget(regTerm, SCHOLARSHIP_THRESHOLD);
   const requiredHighScholar =
     regTerm === null ? '-' : getRequiredFinalForTarget(regTerm, HIGH_SCHOLARSHIP_THRESHOLD);
@@ -113,11 +120,19 @@ export default function CourseGradePage() {
   }
 
   function handleReset() {
+    const prev = { regMid, regEnd, regTermInput, finalScore, manualTotal };
     setRegMid('');
     setRegEnd('');
     setRegTermInput('');
     setFinalScore('');
     setManualTotal('');
+    showToast('Fields cleared', () => {
+      setRegMid(prev.regMid);
+      setRegEnd(prev.regEnd);
+      setRegTermInput(prev.regTermInput);
+      setFinalScore(prev.finalScore);
+      setManualTotal(prev.manualTotal);
+    });
   }
 
   return (
@@ -169,24 +184,43 @@ export default function CourseGradePage() {
         </article>
 
         <article className="card">
-          <h2>Results</h2>
+          <h2 className="section-header-with-copy">
+            Results
+            <CopyButton
+              value={[
+                `RegTerm: ${regTerm === null ? '-' : formatScore(regTerm)}`,
+                `Computed Total: ${computedTotal === null ? '-' : formatScore(computedTotal)}`,
+                `${activeTotalSource}: ${effectiveTotalForLetter === null ? '-' : formatScore(effectiveTotalForLetter)}`,
+                `Letter Grade: ${letterGradeInfo ? letterGradeInfo.letter : '-'}`,
+                `Numeric: ${letterGradeInfo ? letterGradeInfo.numeric : '-'}`,
+                `Traditional: ${letterGradeInfo ? letterGradeInfo.traditional : '-'}`,
+                `Status: ${courseStatus.text}`,
+                `---`,
+                `Required for Pass (>50): ${requiredPass}`,
+                `Required for Scholarship (≥70): ${requiredScholar}`,
+                `Required for High Scholarship (≥90): ${requiredHighScholar}`,
+              ].join('\n')}
+              label="Copy all results"
+            />
+          </h2>
 
           <div className="stats-grid">
             <div className="stat">
               <span>RegTerm</span>
-              <strong>{regTerm === null ? '-' : formatScore(regTerm)}</strong>
+              <strong>{regTerm === null ? '-' : <AnimatedNumber value={regTerm} />}</strong>
             </div>
             <div className="stat">
               <span>Computed Total</span>
-              <strong>{computedTotal === null ? '-' : formatScore(computedTotal)}</strong>
+              <strong>{computedTotal === null ? '-' : <AnimatedNumber value={computedTotal} />}</strong>
             </div>
             <div className="stat">
               <span>{activeTotalSource}</span>
-              <strong>{effectiveTotalForLetter === null ? '-' : formatScore(effectiveTotalForLetter)}</strong>
+              <strong>{effectiveTotalForLetter === null ? '-' : <AnimatedNumber value={effectiveTotalForLetter} />}</strong>
             </div>
-            <div className="stat stat-highlight">
+            <div className="stat stat-highlight stat-with-copy">
               <span>Letter Grade</span>
               <strong>{letterGradeInfo ? letterGradeInfo.letter : '-'}</strong>
+              {letterGradeInfo ? <CopyButton value={letterGradeInfo.letter} label="Copy letter grade" /> : null}
             </div>
           </div>
 
@@ -205,7 +239,7 @@ export default function CourseGradePage() {
 
           <div className="hint-box">
             <p className="hint-title">Required final forecast</p>
-            <p>Pass (≥ 50): {requiredPass}</p>
+            <p>Pass (&gt; 50): {requiredPass}</p>
             <p>Scholarship (≥ 70): {requiredScholar}</p>
             <p>High Scholarship (≥ 90): {requiredHighScholar}</p>
           </div>
