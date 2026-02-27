@@ -1,0 +1,13 @@
+{
+  "watch": [
+    "app",
+    "next.config.mjs",
+    "package.json"
+  ],
+  "ext": "js,mjs,ts,tsx,css,json",
+  "ignore": [
+    ".next",
+    "node_modules"
+  ],
+  "exec": "next dev -p 3000"
+}

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Campus Calculator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a"></div>
+    <div class="bg-shape bg-shape-b"></div>
+
+    <main class="app">
+      <header class="hero">
+        <p class="eyebrow">Study Toolkit</p>
+        <h1>Campus Calculator</h1>
+        <p class="hero-copy">
+          Scientific math, GPA planning, and exam score targeting in one place.
+        </p>
+      </header>
+
+      <section class="tabs" aria-label="Calculator sections">
+        <button class="tab-btn active" data-tab="course-grade">Course Grade</button>
+        <button class="tab-btn" data-tab="scientific">Scientific</button>
+        <button class="tab-btn" data-tab="gpa">GPA</button>
+        <button class="tab-btn" data-tab="target">Final Exam Target</button>
+      </section>
+
+      <section class="panel active" id="course-grade" aria-label="University grade calculator">
+        <div class="tool-card grade-card">
+          <h2>University Grade Calculator</h2>
+          <p class="tool-copy">
+            RegTerm is auto-calculated: (RegMid + RegEnd) / 2. Total is calculated as 0.6 x RegTerm + 0.4 x Final.
+          </p>
+
+          <div class="form-grid grade-grid">
+            <label>
+              RegMid (0-100)
+              <input id="reg-mid" type="number" min="0" max="100" step="0.1" placeholder="e.g. 90" />
+            </label>
+            <label>
+              RegEnd (0-100)
+              <input id="reg-end" type="number" min="0" max="100" step="0.1" placeholder="e.g. 80" />
+            </label>
+            <label>
+              RegTerm (auto)
+              <input id="reg-term" type="number" readonly placeholder="Auto" />
+            </label>
+            <label>
+              Final (0-100)
+              <input id="final-score" type="number" min="0" max="100" step="0.1" placeholder="Optional for forecast" />
+            </label>
+          </div>
+
+          <div class="tool-actions">
+            <button id="calc-course-grade" class="primary">Calculate</button>
+            <button id="reset-course-grade" class="ghost">Reset</button>
+          </div>
+
+          <p id="course-error" class="error"></p>
+
+          <div class="result-box grade-summary">
+            <p>RegTerm: <strong id="regterm-result">0.00</strong></p>
+            <p>Total Score: <strong id="total-result">-</strong></p>
+            <p>Status: <strong id="status-result">Enter scores and press Calculate.</strong></p>
+          </div>
+
+          <div class="result-message" id="course-thresholds">
+            <p><strong>Required final score forecast</strong></p>
+            <p>Pass (>= 50): <span id="need-pass">-</span></p>
+            <p>Scholarship (>= 70): <span id="need-scholar">-</span></p>
+            <p>High scholarship (>= 90): <span id="need-high-scholar">-</span></p>
+          </div>
+
+          <p class="policy-note">
+            Policy: if RegMid is below 25 and RegTerm is below 25, course retake. If Final is strictly between 25 and
+            50, status becomes FX (paid retake exam). If Final is 25 or below, course is not passed.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel" id="scientific" aria-label="Scientific calculator">
+        <div class="calc-card">
+          <div class="display-wrap">
+            <label for="expression">Expression</label>
+            <input id="expression" type="text" autocomplete="off" placeholder="e.g. sin(45) + 3^2" />
+            <p id="calc-error" class="error"></p>
+            <div class="result-row">
+              <span>Result</span>
+              <strong id="result">0</strong>
+            </div>
+          </div>
+
+          <div class="control-row">
+            <button id="angle-mode" class="ghost">Mode: DEG</button>
+            <button id="clear" class="ghost">Clear</button>
+            <button id="delete" class="ghost">Delete</button>
+          </div>
+
+          <div class="keypad" aria-label="Calculator keypad">
+            <button class="key" data-insert="sin(">sin</button>
+            <button class="key" data-insert="cos(">cos</button>
+            <button class="key" data-insert="tan(">tan</button>
+            <button class="key" data-insert="log(">log</button>
+            <button class="key" data-insert="ln(">ln</button>
+            <button class="key" data-insert="sqrt(">sqrt</button>
+            <button class="key" data-insert="(">(</button>
+            <button class="key" data-insert=")">)</button>
+
+            <button class="key" data-insert="7">7</button>
+            <button class="key" data-insert="8">8</button>
+            <button class="key" data-insert="9">9</button>
+            <button class="key op" data-insert="/">÷</button>
+            <button class="key" data-insert="^">^</button>
+            <button class="key" data-insert="pi">π</button>
+            <button class="key" data-insert="e">e</button>
+            <button class="key" data-insert="!">!</button>
+
+            <button class="key" data-insert="4">4</button>
+            <button class="key" data-insert="5">5</button>
+            <button class="key" data-insert="6">6</button>
+            <button class="key op" data-insert="*">×</button>
+            <button class="key op" data-insert="-">−</button>
+            <button class="key" data-insert="abs(">abs</button>
+            <button class="key" data-insert="%">%</button>
+            <button class="key" data-insert=",">,</button>
+
+            <button class="key" data-insert="1">1</button>
+            <button class="key" data-insert="2">2</button>
+            <button class="key" data-insert="3">3</button>
+            <button class="key op" data-insert="+">+</button>
+            <button class="key" data-insert="0">0</button>
+            <button class="key" data-insert=".">.</button>
+            <button class="key equal" id="evaluate">=</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="gpa" aria-label="GPA calculator">
+        <div class="tool-card">
+          <h2>GPA Calculator</h2>
+          <p class="tool-copy">Add each class with credits and grade, then compute weighted GPA.</p>
+
+          <div id="course-list" class="course-list"></div>
+
+          <div class="tool-actions">
+            <button id="add-course" class="ghost">Add Course</button>
+            <button id="calc-gpa" class="primary">Calculate GPA</button>
+          </div>
+
+          <div class="result-box">
+            <p>Total Credits: <strong id="total-credits">0</strong></p>
+            <p>Current GPA: <strong id="gpa-result">0.00</strong></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="target" aria-label="Final exam target calculator">
+        <div class="tool-card">
+          <h2>Final Exam Target</h2>
+          <p class="tool-copy">Estimate the score needed on your final exam to hit your target class grade.</p>
+
+          <div class="form-grid">
+            <label>
+              Current Grade (%)
+              <input id="current-grade" type="number" min="0" max="100" step="0.1" placeholder="e.g. 82.5" />
+            </label>
+            <label>
+              Desired Final Grade (%)
+              <input id="desired-grade" type="number" min="0" max="100" step="0.1" placeholder="e.g. 90" />
+            </label>
+            <label>
+              Final Exam Weight (%)
+              <input id="final-weight" type="number" min="1" max="100" step="0.1" placeholder="e.g. 35" />
+            </label>
+          </div>
+
+          <div class="tool-actions">
+            <button id="calc-target" class="primary">Calculate Needed Score</button>
+          </div>
+
+          <p id="target-result" class="result-message">Enter values to begin.</p>
+        </div>
+      </section>
+    </main>
+
+    <template id="course-row-template">
+      <div class="course-row">
+        <input type="text" class="course-name" placeholder="Course name" />
+        <input type="number" class="course-credits" min="0" step="0.5" placeholder="Credits" />
+        <select class="course-grade" aria-label="Course grade">
+          <option value="4.0">A (4.0)</option>
+          <option value="3.7">A- (3.7)</option>
+          <option value="3.3">B+ (3.3)</option>
+          <option value="3.0">B (3.0)</option>
+          <option value="2.7">B- (2.7)</option>
+          <option value="2.3">C+ (2.3)</option>
+          <option value="2.0">C (2.0)</option>
+          <option value="1.7">C- (1.7)</option>
+          <option value="1.3">D+ (1.3)</option>
+          <option value="1.0">D (1.0)</option>
+          <option value="0.0">F (0.0)</option>
+        </select>
+        <button type="button" class="remove-course" aria-label="Remove course">Remove</button>
+      </div>
+    </template>
+
+    <script src="script.js"></script>
+  </body>
+</html>
