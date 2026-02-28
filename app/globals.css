@@ -671,35 +671,43 @@ input::placeholder {
 
 .syllabus-sections {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .syllabus-section {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
-  padding: 14px;
+  padding: 16px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .syllabus-section-header {
   display: grid;
   gap: 8px;
-  grid-template-columns: 2fr 160px auto;
+  grid-template-columns: 2fr 130px auto;
   align-items: flex-end;
+}
+
+.syllabus-section-header > input {
+  font-weight: 600;
 }
 
 .syllabus-weight {
   display: grid;
   gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .syllabus-items {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
+/* ── Non-attestation item row (simple) ──────────── */
 .syllabus-item-row {
   display: grid;
   gap: 8px;
@@ -707,14 +715,104 @@ input::placeholder {
   align-items: end;
 }
 
+/* ── Attestation labels ─────────────────────────── */
+.syllabus-att-labels {
+  display: grid;
+  grid-template-columns: 2fr 80px 90px 64px 36px;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 0 1px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Attestation item row ───────────────────────── */
+.syllabus-att-row {
+  display: grid;
+  grid-template-columns: 2fr 80px 90px 64px 36px;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+.syllabus-att-row:last-child {
+  border-bottom: none;
+}
+
+.syllabus-att-row input[type="text"] {
+  font-size: 13px;
+}
+
+.syllabus-att-row input[type="number"] {
+  font-size: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.syllabus-att-pts {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.syllabus-att-row .remove {
+  padding: 4px 8px;
+  font-size: 14px;
+  line-height: 1;
+  min-width: 28px;
+}
+
+/* ── Section footer ─────────────────────────────── */
 .syllabus-section-footer {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+  padding-top: 8px;
 }
 
+/* ── Attestation summary chip ───────────────────── */
+.syllabus-att-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.syllabus-att-summary__score {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.syllabus-att-summary__max {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.syllabus-att-summary__pct {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+}
+
+.syllabus-att-summary__contrib {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ── Non-attestation metrics (legacy) ───────────── */
 .syllabus-metrics {
   display: flex;
   flex-wrap: wrap;
@@ -723,9 +821,38 @@ input::placeholder {
   font-size: 13px;
 }
 
+/* ── Course summary ─────────────────────────────── */
 .syllabus-summary {
   display: grid;
   gap: 10px;
+}
+
+/* ── Formula Breakdown ────────────────────────────── */
+.syllabus-formula {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+
+.syllabus-formula__label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.syllabus-formula__expr {
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  word-break: break-all;
+}
+
+.syllabus-formula__expr strong {
+  color: var(--accent);
 }
 
 /* ── Template Picker ──────────────────────────────── */
@@ -1968,6 +2095,29 @@ html.theme-transitioning *::after {
   .syllabus-section-header,
   .syllabus-item-row {
     grid-template-columns: 1fr;
+  }
+
+  .syllabus-att-labels {
+    display: none;
+  }
+
+  .syllabus-att-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .syllabus-att-row input[type="text"] {
+    grid-column: 1 / -1;
+  }
+
+  .syllabus-att-row .remove {
+    grid-row: 2;
+    justify-self: end;
+  }
+
+  .syllabus-att-summary {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .help-grid-2,

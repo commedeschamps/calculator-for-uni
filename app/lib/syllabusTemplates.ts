@@ -1,4 +1,14 @@
 // ── Pre-built syllabus templates for SE-2411 Term 6 ──
+// All courses follow the standard attestation structure:
+//   1st Attestation (30%) — each item has its own max points, sum = 100
+//   2nd Attestation (30%) — each item has its own max points, sum = 100
+//   Final Exam       (40%) — scored 0-100
+//   Total = 0.3 × Att1 + 0.3 × Att2 + 0.4 × Final
+
+export type SyllabusTemplateItem = {
+  title: string;
+  maxPoints: number;
+};
 
 export type SyllabusTemplate = {
   key: string;
@@ -6,7 +16,7 @@ export type SyllabusTemplate = {
   credits: number;
   category: 'base' | 'elective';
   pair?: number; // elective pair number
-  sections: { title: string; weight: string; items: string[] }[];
+  sections: { title: string; weight: string; items: SyllabusTemplateItem[] }[];
 };
 
 export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
@@ -17,10 +27,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     credits: 5,
     category: 'base',
     sections: [
-      { title: 'Assignments', weight: '20', items: ['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4'] },
-      { title: 'Quizzes', weight: '20', items: ['Quiz 1', 'Quiz 2', 'Quiz 3', 'Quiz 4'] },
-      { title: 'Midterm', weight: '20', items: ['Midterm'] },
-      { title: 'Endterm', weight: '40', items: ['Endterm'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Assignment 1', maxPoints: 25 },
+        { title: 'Assignment 2', maxPoints: 25 },
+        { title: 'Quiz 1', maxPoints: 25 },
+        { title: 'Midterm', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Assignment 3', maxPoints: 25 },
+        { title: 'Assignment 4', maxPoints: 25 },
+        { title: 'Quiz 2', maxPoints: 25 },
+        { title: 'Endterm', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'Final Exam', maxPoints: 100 },
+      ]},
     ],
   },
   {
@@ -29,10 +50,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     credits: 5,
     category: 'base',
     sections: [
-      { title: 'Classwork', weight: '20', items: ['Classwork 1', 'Classwork 2', 'Classwork 3', 'Classwork 4'] },
-      { title: 'Assignments', weight: '20', items: ['Assignment 1', 'Assignment 2'] },
-      { title: 'Midterm', weight: '20', items: ['Midterm Essay'] },
-      { title: 'Endterm', weight: '40', items: ['Endterm Essay'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Classwork 1', maxPoints: 25 },
+        { title: 'Classwork 2', maxPoints: 25 },
+        { title: 'Assignment 1', maxPoints: 25 },
+        { title: 'Midterm Essay', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Classwork 3', maxPoints: 25 },
+        { title: 'Classwork 4', maxPoints: 25 },
+        { title: 'Assignment 2', maxPoints: 25 },
+        { title: 'Endterm Essay', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'Final Essay', maxPoints: 100 },
+      ]},
     ],
   },
   {
@@ -41,9 +73,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     credits: 4,
     category: 'base',
     sections: [
-      { title: 'Weekly Reports', weight: '30', items: ['Report 1', 'Report 2', 'Report 3', 'Report 4', 'Report 5'] },
-      { title: 'Supervisor Evaluation', weight: '30', items: ['Supervisor Evaluation'] },
-      { title: 'Final Report & Defense', weight: '40', items: ['Final Report', 'Defense'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Report 1', maxPoints: 25 },
+        { title: 'Report 2', maxPoints: 25 },
+        { title: 'Report 3', maxPoints: 25 },
+        { title: 'Supervisor Eval', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Report 4', maxPoints: 25 },
+        { title: 'Report 5', maxPoints: 25 },
+        { title: 'Defense Prep', maxPoints: 25 },
+        { title: 'Supervisor Eval 2', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'Final Report & Defense', maxPoints: 100 },
+      ]},
     ],
   },
 
@@ -55,10 +99,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     category: 'elective',
     pair: 1,
     sections: [
-      { title: 'Assignments', weight: '30', items: ['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4', 'Assignment 5'] },
-      { title: 'Quizzes', weight: '10', items: ['Quiz 1', 'Quiz 2'] },
-      { title: 'Midterm', weight: '20', items: ['Midterm'] },
-      { title: 'Endterm', weight: '40', items: ['Endterm'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Assignment 1', maxPoints: 25 },
+        { title: 'Assignment 2', maxPoints: 25 },
+        { title: 'Quiz 1', maxPoints: 25 },
+        { title: 'Midterm', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Assignment 3', maxPoints: 25 },
+        { title: 'Assignment 4', maxPoints: 25 },
+        { title: 'Assignment 5', maxPoints: 25 },
+        { title: 'Endterm', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'Final Exam', maxPoints: 100 },
+      ]},
     ],
   },
   {
@@ -68,10 +123,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     category: 'elective',
     pair: 1,
     sections: [
-      { title: 'Assignments', weight: '30', items: ['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4'] },
-      { title: 'Quizzes', weight: '10', items: ['Quiz 1', 'Quiz 2'] },
-      { title: 'Midterm', weight: '20', items: ['Midterm Project'] },
-      { title: 'Endterm', weight: '40', items: ['Final Project'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Assignment 1', maxPoints: 25 },
+        { title: 'Assignment 2', maxPoints: 25 },
+        { title: 'Assignment 3', maxPoints: 25 },
+        { title: 'Midterm', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Assignment 4', maxPoints: 25 },
+        { title: 'Assignment 5', maxPoints: 25 },
+        { title: 'Assignment 6', maxPoints: 25 },
+        { title: 'Endterm', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'MCQ', maxPoints: 100 },
+      ]},
     ],
   },
 
@@ -83,10 +149,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     category: 'elective',
     pair: 2,
     sections: [
-      { title: 'Assignments', weight: '30', items: ['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4', 'Assignment 5'] },
-      { title: 'Quizzes', weight: '10', items: ['Quiz 1', 'Quiz 2'] },
-      { title: 'Midterm', weight: '20', items: ['Midterm'] },
-      { title: 'Endterm', weight: '40', items: ['Endterm'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Assignment 1', maxPoints: 25 },
+        { title: 'Assignment 2', maxPoints: 25 },
+        { title: 'Quiz 1', maxPoints: 25 },
+        { title: 'Midterm', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Assignment 3', maxPoints: 25 },
+        { title: 'Assignment 4', maxPoints: 25 },
+        { title: 'Assignment 5', maxPoints: 25 },
+        { title: 'Endterm', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'Final Exam', maxPoints: 100 },
+      ]},
     ],
   },
   {
@@ -96,10 +173,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     category: 'elective',
     pair: 2,
     sections: [
-      { title: 'Assignments', weight: '30', items: ['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4', 'Assignment 5'] },
-      { title: 'Quizzes', weight: '10', items: ['Quiz 1', 'Quiz 2'] },
-      { title: 'Midterm', weight: '20', items: ['Midterm'] },
-      { title: 'Endterm', weight: '40', items: ['Final Project'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Assignment 1', maxPoints: 25 },
+        { title: 'Assignment 2', maxPoints: 25 },
+        { title: 'Quiz 1', maxPoints: 25 },
+        { title: 'Midterm', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Assignment 3', maxPoints: 25 },
+        { title: 'Assignment 4', maxPoints: 25 },
+        { title: 'Assignment 5', maxPoints: 25 },
+        { title: 'Endterm', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'Final Project', maxPoints: 100 },
+      ]},
     ],
   },
 
@@ -111,10 +199,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     category: 'elective',
     pair: 3,
     sections: [
-      { title: 'Assignments', weight: '30', items: ['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4', 'Assignment 5'] },
-      { title: 'Quizzes', weight: '10', items: ['Quiz 1', 'Quiz 2'] },
-      { title: 'Midterm', weight: '20', items: ['Midterm'] },
-      { title: 'Endterm', weight: '40', items: ['Endterm'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Assignment 1', maxPoints: 25 },
+        { title: 'Assignment 2', maxPoints: 25 },
+        { title: 'Quiz 1', maxPoints: 25 },
+        { title: 'Midterm', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Assignment 3', maxPoints: 25 },
+        { title: 'Assignment 4', maxPoints: 25 },
+        { title: 'Assignment 5', maxPoints: 25 },
+        { title: 'Endterm', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'Final Exam', maxPoints: 100 },
+      ]},
     ],
   },
   {
@@ -124,10 +223,21 @@ export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [
     category: 'elective',
     pair: 3,
     sections: [
-      { title: 'Assignments', weight: '30', items: ['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4', 'Assignment 5'] },
-      { title: 'Quizzes', weight: '10', items: ['Quiz 1', 'Quiz 2'] },
-      { title: 'Midterm', weight: '20', items: ['Midterm'] },
-      { title: 'Endterm', weight: '40', items: ['Endterm'] },
+      { title: '1st Attestation', weight: '30', items: [
+        { title: 'Assignment 1', maxPoints: 25 },
+        { title: 'Assignment 2', maxPoints: 25 },
+        { title: 'Quiz 1', maxPoints: 25 },
+        { title: 'Midterm', maxPoints: 25 },
+      ]},
+      { title: '2nd Attestation', weight: '30', items: [
+        { title: 'Assignment 3', maxPoints: 25 },
+        { title: 'Assignment 4', maxPoints: 25 },
+        { title: 'Assignment 5', maxPoints: 25 },
+        { title: 'Endterm', maxPoints: 25 },
+      ]},
+      { title: 'Final Exam', weight: '40', items: [
+        { title: 'Final Exam', maxPoints: 100 },
+      ]},
     ],
   },
 ];

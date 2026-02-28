@@ -6,14 +6,21 @@ import { useToast } from '../components/ToastProvider';
 import { usePersistedState } from '../lib/usePersistedState';
 import {
   calculateSyllabusCourseResult,
+  DEFAULT_SYLLABUS_SECTION_PRESETS,
   createSyllabusCourse,
   createSyllabusItem,
   createSyllabusSection,
   formatScore,
+  getSyllabusItemInputConfig,
   getLetterGradeInfo,
+  getSyllabusSectionMetricLabel,
+  ATTESTATION_SECTION_MAX,
   HIGH_SCHOLARSHIP_THRESHOLD,
   PASSING_THRESHOLD,
   SCHOLARSHIP_THRESHOLD,
+  isAttestationSection,
+  parseInputValue,
+  type AttestationFormulaBreakdown,
   type StatusTone,
   type SyllabusCourse,
   type SyllabusSection,
@@ -31,17 +38,22 @@ type CourseViewModel = {
   weightedTotal: number;
   hasWeightMismatch: boolean;
   hasInvalidWeights: boolean;
+  hasAttestationOverflow: boolean;
+  usesAttestationStructure: boolean;
+  formulaBreakdown: AttestationFormulaBreakdown | null;
   letter: ReturnType<typeof getLetterGradeInfo>;
   statusText: string;
   statusTone: StatusTone;
-  sectionMetrics: Map<string, { average: number; contribution: number; gradedItems: number; totalItems: number }>;
+  sectionMetrics: Map<string, { score: number; contribution: number; gradedItems: number; totalItems: number; isAttestation: boolean; maxPointsSum: number; maxPointsMismatch: boolean; overflowAmount: number }>;
 };
 
 function detectItemPrefix(sectionTitle: string): string {
   const normalized = sectionTitle.trim().toLowerCase();
   if (normalized.includes('quiz')) return 'Quiz';
+  if (normalized.includes('final exam')) return 'Exam';
   if (normalized.includes('midterm')) return 'Midterm';
-  if (normalized.includes('endterm') || normalized.includes('final')) return 'Endterm';
+  if (normalized.includes('endterm')) return 'Endterm';
+  if (normalized.includes('final')) return 'Final';
   if (normalized.includes('report')) return 'Report';
   return 'Assignment';
 }
@@ -63,12 +75,21 @@ function normalizeLegacyLabs(courses: SyllabusCourse[]): SyllabusCourse[] {
         changed = true;
       }
 
+      const isAttest = isAttestationSection(title);
+
       const items = section.items.map((item) => {
+        let updatedItem = item;
         const updatedTitle = item.title.replace(/^lab\s*(\d+)$/i, 'Assignment $1');
         if (updatedTitle !== item.title) {
           changed = true;
+          updatedItem = { ...updatedItem, title: updatedTitle };
         }
-        return updatedTitle === item.title ? item : { ...item, title: updatedTitle };
+        // Migrate items without maxPoints
+        if (!('maxPoints' in item) || item.maxPoints === undefined || item.maxPoints === '') {
+          changed = true;
+          updatedItem = { ...updatedItem, maxPoints: isAttest ? '25' : '100' };
+        }
+        return updatedItem === item ? item : updatedItem;
       });
 
       if (title === section.title && items === section.items) {
@@ -131,10 +152,10 @@ function buildStatus(total: number, hasWeightMismatch: boolean): { text: string;
 }
 
 export default function SyllabusPage() {
-  const [courses, setCourses] = usePersistedState<SyllabusCourse[]>('syl-courses', []);
+  const [courses, setCourses, hasHydratedCourses] = usePersistedState<SyllabusCourse[]>('syl-courses', []);
   const [nextCourseId, setNextCourseId] = usePersistedState('syl-nextId', 1);
   const [selectedKeys, setSelectedKeys] = usePersistedState<string[]>('syl-selected-templates', []);
-  const [pickerOpen, setPickerOpen] = useState(courses.length === 0);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const selectedTemplates = useMemo(() => new Set(selectedKeys), [selectedKeys]);
 
@@ -152,6 +173,12 @@ export default function SyllabusPage() {
   useEffect(() => {
     setCourses((prev) => normalizeLegacyLabs(prev));
   }, [setCourses]);
+
+  useEffect(() => {
+    if (hasHydratedCourses && courses.length === 0) {
+      setPickerOpen(true);
+    }
+  }, [courses.length, hasHydratedCourses]);
 
   const totalCredits = useMemo(() => {
     let sum = 0;
@@ -207,10 +234,14 @@ export default function SyllabusPage() {
           result.sectionResults.map((row) => [
             row.sectionId,
             {
-              average: row.average,
+              score: row.score,
               contribution: row.contribution,
               gradedItems: row.gradedItems,
               totalItems: row.totalItems,
+              isAttestation: row.isAttestation,
+              maxPointsSum: row.maxPointsSum,
+              maxPointsMismatch: row.maxPointsMismatch,
+              overflowAmount: row.overflowAmount,
             },
           ])
         );
@@ -221,6 +252,9 @@ export default function SyllabusPage() {
           weightedTotal,
           hasWeightMismatch,
           hasInvalidWeights: result.hasInvalidWeights,
+          hasAttestationOverflow: result.hasAttestationOverflow,
+          usesAttestationStructure: result.usesAttestationStructure,
+          formulaBreakdown: result.formulaBreakdown,
           letter,
           statusText: status.text,
           statusTone: status.tone,
@@ -265,7 +299,18 @@ export default function SyllabusPage() {
       ...course,
       sections: [
         ...course.sections,
-        createSyllabusSection(`Assignments ${course.sections.length + 1}`, '0', ['Assignment 1']),
+        (() => {
+          const existingTitles = new Set(course.sections.map((section) => section.title.trim().toLowerCase()));
+          const nextPreset = DEFAULT_SYLLABUS_SECTION_PRESETS.find(
+            (preset) => !existingTitles.has(preset.title.trim().toLowerCase()),
+          );
+
+          if (nextPreset) {
+            return createSyllabusSection(nextPreset.title, nextPreset.weight, nextPreset.items);
+          }
+
+          return createSyllabusSection(`Section ${course.sections.length + 1}`, '0', [{ title: 'Item 1', maxPoints: 100 }]);
+        })(),
       ],
     }));
   }
@@ -284,10 +329,14 @@ export default function SyllabusPage() {
   }
 
   function handleAddItem(courseId: number, sectionId: string) {
-    updateSection(courseId, sectionId, (section) => ({
-      ...section,
-      items: [...section.items, createSyllabusItem(nextItemLabel(section.title, section.items.length))],
-    }));
+    updateSection(courseId, sectionId, (section) => {
+      const isAttest = isAttestationSection(section.title);
+      const defaultMax = isAttest ? 25 : 100;
+      return {
+        ...section,
+        items: [...section.items, createSyllabusItem(nextItemLabel(section.title, section.items.length), defaultMax)],
+      };
+    });
   }
 
   function handleRemoveItem(courseId: number, sectionId: string, itemId: string) {
@@ -401,6 +450,12 @@ export default function SyllabusPage() {
             <div className="syllabus-sections">
               {entry.course.sections.map((section) => {
                 const metrics = entry.sectionMetrics.get(section.id);
+                const isAttest = isAttestationSection(section.title);
+                const metricLabel = getSyllabusSectionMetricLabel(section.title);
+                const weightSum = metrics?.maxPointsSum ?? 0;
+                const sectionPct = isAttest && weightSum > 0
+                  ? Math.min((metrics?.score ?? 0) / weightSum * 100, 100)
+                  : 0;
 
                 return (
                   <section className="syllabus-section" key={section.id}>
@@ -440,73 +495,156 @@ export default function SyllabusPage() {
                       </button>
                     </div>
 
+                    {isAttest && (
+                      <div className="syllabus-att-labels">
+                        <span>Item</span>
+                        <span>Weight</span>
+                        <span>Grade %</span>
+                        <span>Points</span>
+                        <span></span>
+                      </div>
+                    )}
+
                     <div className="syllabus-items">
-                      {section.items.map((item) => (
-                        <div className="syllabus-item-row" key={item.id}>
-                          <input
-                            type="text"
-                            value={item.title}
-                            onChange={(event) =>
-                              updateSection(entry.course.id, section.id, (source) => ({
-                                ...source,
-                                items: source.items.map((sectionItem) =>
-                                  sectionItem.id === item.id
-                                    ? { ...sectionItem, title: event.target.value }
-                                    : sectionItem
-                                ),
-                              }))
-                            }
-                          />
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            placeholder="Score (0-100)"
-                            value={item.score}
-                            onChange={(event) =>
-                              updateSection(entry.course.id, section.id, (source) => ({
-                                ...source,
-                                items: source.items.map((sectionItem) =>
-                                  sectionItem.id === item.id
-                                    ? { ...sectionItem, score: event.target.value }
-                                    : sectionItem
-                                ),
-                              }))
-                            }
-                          />
-                          <button
-                            className="remove"
-                            type="button"
-                            onClick={() => handleRemoveItem(entry.course.id, section.id, item.id)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
+                      {section.items.map((item) => {
+                        const itemInput = getSyllabusItemInputConfig(section.title);
+                        const scoreVal = parseInputValue(item.score);
+                        const maxPts = parseInputValue(item.maxPoints) ?? 25;
+                        const earned = scoreVal !== null ? maxPts * Math.min(scoreVal, 100) / 100 : null;
+
+                        return isAttest ? (
+                          <div className="syllabus-att-row" key={item.id}>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(event) =>
+                                updateSection(entry.course.id, section.id, (source) => ({
+                                  ...source,
+                                  items: source.items.map((si) =>
+                                    si.id === item.id ? { ...si, title: event.target.value } : si
+                                  ),
+                                }))
+                              }
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              placeholder="25"
+                              value={item.maxPoints}
+                              onChange={(event) =>
+                                updateSection(entry.course.id, section.id, (source) => ({
+                                  ...source,
+                                  items: source.items.map((si) =>
+                                    si.id === item.id ? { ...si, maxPoints: event.target.value } : si
+                                  ),
+                                }))
+                              }
+                            />
+                            <input
+                              type="number"
+                              min={itemInput.min}
+                              max={itemInput.max}
+                              step={itemInput.step}
+                              placeholder="0–100"
+                              value={item.score}
+                              onChange={(event) =>
+                                updateSection(entry.course.id, section.id, (source) => ({
+                                  ...source,
+                                  items: source.items.map((si) =>
+                                    si.id === item.id ? { ...si, score: event.target.value } : si
+                                  ),
+                                }))
+                              }
+                            />
+                            <span className="syllabus-att-pts">
+                              {earned !== null ? formatScore(earned, 1) : '—'}
+                            </span>
+                            <button
+                              className="remove"
+                              type="button"
+                              onClick={() => handleRemoveItem(entry.course.id, section.id, item.id)}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="syllabus-item-row" key={item.id}>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(event) =>
+                                updateSection(entry.course.id, section.id, (source) => ({
+                                  ...source,
+                                  items: source.items.map((si) =>
+                                    si.id === item.id ? { ...si, title: event.target.value } : si
+                                  ),
+                                }))
+                              }
+                            />
+                            <input
+                              type="number"
+                              min={itemInput.min}
+                              max={itemInput.max}
+                              step={itemInput.step}
+                              placeholder={itemInput.placeholder}
+                              value={item.score}
+                              onChange={(event) =>
+                                updateSection(entry.course.id, section.id, (source) => ({
+                                  ...source,
+                                  items: source.items.map((si) =>
+                                    si.id === item.id ? { ...si, score: event.target.value } : si
+                                  ),
+                                }))
+                              }
+                            />
+                            <button
+                              className="remove"
+                              type="button"
+                              onClick={() => handleRemoveItem(entry.course.id, section.id, item.id)}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
 
                     <div className="syllabus-section-footer">
                       <button
-                        className="btn btn-muted"
+                        className="btn btn-muted btn-sm"
                         type="button"
                         onClick={() => handleAddItem(entry.course.id, section.id)}
                       >
-                        Add Item
+                        + Item
                       </button>
 
-                      <div className="syllabus-metrics">
-                        <span>
-                          Avg: <strong>{formatScore(metrics?.average ?? 0)}</strong>
-                        </span>
-                        <span>
-                          Contribution: <strong>{formatScore(metrics?.contribution ?? 0)}</strong>
-                        </span>
-                        <span>
-                          Graded: <strong>{metrics?.gradedItems ?? 0}</strong>/{metrics?.totalItems ?? section.items.length}
-                        </span>
-                      </div>
+                      {isAttest ? (
+                        <div className="syllabus-att-summary">
+                          <span className="syllabus-att-summary__score">
+                            {formatScore(metrics?.score ?? 0, 1)}<span className="syllabus-att-summary__max">/{formatScore(metrics?.maxPointsSum ?? 0, 0)}</span>
+                          </span>
+                          <span className="syllabus-att-summary__pct">{formatScore(sectionPct, 1)}%</span>
+                          <span className="syllabus-att-summary__contrib">→ {formatScore(metrics?.contribution ?? 0, 1)}</span>
+                        </div>
+                      ) : (
+                        <div className="syllabus-metrics">
+                          <span>
+                            {metricLabel}: <strong>{formatScore(metrics?.score ?? 0)}</strong>
+                          </span>
+                          <span>
+                            Contribution: <strong>{formatScore(metrics?.contribution ?? 0)}</strong>
+                          </span>
+                        </div>
+                      )}
                     </div>
+
+                    {metrics?.isAttestation && metrics.maxPointsMismatch && (
+                      <p className="message message-warn" style={{ margin: 0, fontSize: 13 }}>
+                        Weights sum to {formatScore(metrics.maxPointsSum, 0)} — should be {ATTESTATION_SECTION_MAX}.
+                      </p>
+                    )}
 
                     {(() => {
                       const graded = metrics?.gradedItems ?? 0;
@@ -520,7 +658,7 @@ export default function SyllabusPage() {
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          <span className="progress-bar-label">{pct}%</span>
+                          <span className="progress-bar-label">{graded}/{total}</span>
                         </div>
                       );
                     })()}
@@ -530,6 +668,21 @@ export default function SyllabusPage() {
             </div>
 
             <div className="syllabus-summary">
+              {entry.formulaBreakdown && (
+                <div className="syllabus-formula">
+                  <span className="syllabus-formula__label">Formula:</span>
+                  <span className="syllabus-formula__expr">
+                    {formatScore(entry.formulaBreakdown.att1Weight / 100, 1)} × <strong>{formatScore(entry.formulaBreakdown.att1Score, 1)}</strong>
+                    {' + '}
+                    {formatScore(entry.formulaBreakdown.att2Weight / 100, 1)} × <strong>{formatScore(entry.formulaBreakdown.att2Score, 1)}</strong>
+                    {' + '}
+                    {formatScore(entry.formulaBreakdown.finalWeight / 100, 1)} × <strong>{formatScore(entry.formulaBreakdown.finalScore, 1)}</strong>
+                    {' = '}
+                    <strong>{formatScore(entry.formulaBreakdown.total)}</strong>
+                  </span>
+                </div>
+              )}
+
               <div className="stats-grid">
                 <div className="stat">
                   <span>Total Weight</span>
@@ -555,6 +708,10 @@ export default function SyllabusPage() {
 
               {entry.hasWeightMismatch ? (
                 <p className="message message-warn">Weight sum is {formatScore(entry.totalWeight)}. It must be exactly 100%.</p>
+              ) : null}
+
+              {entry.hasAttestationOverflow ? (
+                <p className="message message-warn">One or more attestation sections exceed 100 points. Excess points are capped.</p>
               ) : null}
 
               <p className={`message ${entry.statusTone === 'ok' ? 'message-ok' : 'message-warn'}`}>{entry.statusText}</p>

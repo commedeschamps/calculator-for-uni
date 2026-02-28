@@ -8,6 +8,12 @@ export const FX_MIN_EXCLUSIVE = 25;
 export const FX_MAX_EXCLUSIVE = 50;
 export const RETAKE_THRESHOLD = 25;
 
+// ── Attestation constants ──
+export const ATTESTATION_SECTION_MAX = 100;
+export const STANDARD_ATT1_WEIGHT = 30;
+export const STANDARD_ATT2_WEIGHT = 30;
+export const STANDARD_FINAL_WEIGHT = 40;
+
 export type StatusTone = 'ok' | 'warn';
 
 export type LetterGradeInfo = {
@@ -58,6 +64,7 @@ export type GpaCourse = {
 export type SyllabusItem = {
   id: string;
   title: string;
+  maxPoints: string;
   score: string;
 };
 
@@ -74,13 +81,38 @@ export type SyllabusCourse = {
   sections: SyllabusSection[];
 };
 
+export type SyllabusSectionPresetItem = {
+  title: string;
+  maxPoints: number;
+};
+
+export type SyllabusSectionPreset = {
+  title: string;
+  weight: string;
+  items: SyllabusSectionPresetItem[];
+};
+
 export type SyllabusSectionResult = {
   sectionId: string;
-  average: number;
+  score: number;
   weight: number;
   contribution: number;
   gradedItems: number;
   totalItems: number;
+  isAttestation: boolean;
+  maxPointsSum: number; // sum of all item maxPoints in an attestation section
+  maxPointsMismatch: boolean; // true if maxPointsSum ≠ 100 for attestation sections
+  overflowAmount: number; // how much over maxPointsSum for attestation sections
+};
+
+export type AttestationFormulaBreakdown = {
+  att1Score: number;
+  att1Weight: number;
+  att2Score: number;
+  att2Weight: number;
+  finalScore: number;
+  finalWeight: number;
+  total: number;
 };
 
 export type SyllabusCourseResult = {
@@ -88,6 +120,9 @@ export type SyllabusCourseResult = {
   totalWeight: number;
   weightedTotal: number;
   hasInvalidWeights: boolean;
+  usesAttestationStructure: boolean;
+  hasAttestationOverflow: boolean;
+  formulaBreakdown: AttestationFormulaBreakdown | null;
 };
 
 export function parseInputValue(rawValue: string): number | null {
@@ -171,33 +206,103 @@ function createEntityId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function createSyllabusItem(title: string): SyllabusItem {
+export function createSyllabusItem(title: string, maxPoints: number = 25): SyllabusItem {
   return {
     id: createEntityId('item'),
     title,
+    maxPoints: String(maxPoints),
     score: '',
   };
 }
 
-export function createSyllabusSection(title: string, weight: string, itemTitles: string[]): SyllabusSection {
+export function createSyllabusSection(
+  title: string,
+  weight: string,
+  items: SyllabusSectionPresetItem[],
+): SyllabusSection {
   return {
     id: createEntityId('section'),
     title,
     weight,
-    items: itemTitles.map((itemTitle) => createSyllabusItem(itemTitle)),
+    items: items.map((item) => createSyllabusItem(item.title, item.maxPoints)),
   };
 }
+
+export const DEFAULT_SYLLABUS_SECTION_PRESETS: SyllabusSectionPreset[] = [
+  {
+    title: '1st Attestation',
+    weight: '30',
+    items: [
+      { title: 'Assignment 1', maxPoints: 25 },
+      { title: 'Assignment 2', maxPoints: 25 },
+      { title: 'Assignment 3', maxPoints: 25 },
+      { title: 'Midterm', maxPoints: 25 },
+    ],
+  },
+  {
+    title: '2nd Attestation',
+    weight: '30',
+    items: [
+      { title: 'Assignment 4', maxPoints: 25 },
+      { title: 'Assignment 5', maxPoints: 25 },
+      { title: 'Assignment 6', maxPoints: 25 },
+      { title: 'Endterm', maxPoints: 25 },
+    ],
+  },
+  {
+    title: 'Final Exam',
+    weight: '40',
+    items: [
+      { title: 'MCQ', maxPoints: 100 },
+    ],
+  },
+];
 
 export function createSyllabusCourse(id: number, title?: string): SyllabusCourse {
   return {
     id,
     title: title ?? `Course ${id}`,
-    sections: [
-      createSyllabusSection('Assignments', '40', ['Assignment 1', 'Assignment 2']),
-      createSyllabusSection('Quizzes', '20', ['Quiz 1']),
-      createSyllabusSection('Midterm / Endterm', '40', ['Midterm', 'Endterm']),
-    ],
+    sections: DEFAULT_SYLLABUS_SECTION_PRESETS.map((preset) =>
+      createSyllabusSection(preset.title, preset.weight, preset.items),
+    ),
   };
+}
+
+export function isAttestationSection(sectionTitle: string): boolean {
+  return sectionTitle.trim().toLowerCase().includes('attest');
+}
+
+export function isFinalExamSection(sectionTitle: string): boolean {
+  const normalized = sectionTitle.trim().toLowerCase();
+  return normalized.includes('final') || normalized.includes('exam');
+}
+
+/**
+ * Checks whether a course follows the standard attestation structure:
+ * 1st Attestation (30%) + 2nd Attestation (30%) + Final Exam (40%) = 100%
+ */
+export function usesStandardAttestationStructure(course: SyllabusCourse): boolean {
+  const attestations = course.sections.filter((s) => isAttestationSection(s.title));
+  const finals = course.sections.filter((s) => isFinalExamSection(s.title));
+  return attestations.length === 2 && finals.length >= 1 && course.sections.length <= 4;
+}
+
+export function getSyllabusItemInputConfig(sectionTitle: string, _itemMaxPoints?: number): {
+  min: number;
+  max: number;
+  step: number;
+  placeholder: string;
+} {
+  return {
+    min: 0,
+    max: 100,
+    step: 0.1,
+    placeholder: 'Score (0-100)',
+  };
+}
+
+export function getSyllabusSectionMetricLabel(sectionTitle: string): 'Total' | 'Avg' {
+  return isAttestationSection(sectionTitle) ? 'Total' : 'Avg';
 }
 
 function parseWeight(weight: string): number | null {
@@ -209,6 +314,7 @@ export function calculateSyllabusCourseResult(course: SyllabusCourse): SyllabusC
   let totalWeight = 0;
   let weightedTotal = 0;
   let hasInvalidWeights = false;
+  let hasAttestationOverflow = false;
 
   const sectionResults: SyllabusSectionResult[] = course.sections.map((section) => {
     const weightValue = parseWeight(section.weight);
@@ -220,30 +326,125 @@ export function calculateSyllabusCourseResult(course: SyllabusCourse): SyllabusC
 
     totalWeight += weight;
 
-    const gradedScores = section.items
-      .map((item) => parseInputValue(item.score))
-      .filter((score): score is number => isPercentage(score));
+    const isAttest = isAttestationSection(section.title);
 
-    const average =
-      gradedScores.length > 0 ? gradedScores.reduce((sum, score) => sum + score, 0) / gradedScores.length : 0;
-    const contribution = average * (weight / 100);
+    // For attestation sections: each item has a weight (maxPoints) and a grade (score, 0-100%).
+    // Item contribution to attestation = maxPoints × (score / 100).
+    // Attestation total = sum of item contributions (should be out of maxPointsSum, ideally 100).
+    let gradedCount = 0;
+    let rawSum = 0;
+    let maxPointsSum = 0;
+
+    for (const item of section.items) {
+      const itemMax = parseInputValue(item.maxPoints);
+      if (isAttest && itemMax !== null && itemMax > 0) {
+        maxPointsSum += itemMax;
+      }
+
+      const scoreVal = parseInputValue(item.score);
+      if (scoreVal === null) continue;
+
+      if (isAttest) {
+        const max = (itemMax !== null && itemMax > 0) ? itemMax : 25;
+        if (scoreVal >= 0) {
+          // score is a percentage (0-100), contribution = weight × score / 100
+          const clamped = Math.min(scoreVal, 100);
+          rawSum += max * (clamped / 100);
+          gradedCount++;
+        }
+      } else {
+        if (isPercentage(scoreVal)) {
+          rawSum += scoreVal;
+          gradedCount++;
+        }
+      }
+    }
+
+    // For attestation sections with no maxPoints set, use default sum
+    if (isAttest && maxPointsSum === 0) {
+      maxPointsSum = section.items.length * 25;
+    }
+
+    const maxPointsMismatch = isAttest && Math.abs(maxPointsSum - ATTESTATION_SECTION_MAX) > 0.0001;
+
+    const score = isAttest
+      ? rawSum
+      : gradedCount > 0
+        ? rawSum / gradedCount
+        : 0;
+
+    // For attestation: rawSum is already the weighted total (out of maxPointsSum)
+    // normalizedScore converts it to 0-100 scale for the section contribution
+    const normalizedScore = isAttest && maxPointsSum > 0
+      ? (rawSum / maxPointsSum) * 100
+      : score;
+
+    const overflowAmount = isAttest ? Math.max(0, rawSum - maxPointsSum) : 0;
+    if (overflowAmount > 0) {
+      hasAttestationOverflow = true;
+    }
+
+    // Use normalized score (0-100) for contribution
+    const cappedNormalized = isAttest ? Math.min(normalizedScore, 100) : score;
+    const contribution = cappedNormalized * (weight / 100);
 
     weightedTotal += contribution;
 
     return {
       sectionId: section.id,
-      average,
+      score,
       weight,
       contribution,
-      gradedItems: gradedScores.length,
+      gradedItems: gradedCount,
       totalItems: section.items.length,
+      isAttestation: isAttest,
+      maxPointsSum,
+      maxPointsMismatch,
+      overflowAmount,
     };
   });
+
+  // Build formula breakdown if using attestation structure
+  const usesAttestation = usesStandardAttestationStructure(course);
+  let formulaBreakdown: AttestationFormulaBreakdown | null = null;
+
+  if (usesAttestation) {
+    const attResults = sectionResults.filter((r) => {
+      const section = course.sections.find((s) => s.id === r.sectionId);
+      return section && isAttestationSection(section.title);
+    });
+    const finalResults = sectionResults.filter((r) => {
+      const section = course.sections.find((s) => s.id === r.sectionId);
+      return section && isFinalExamSection(section.title);
+    });
+
+    if (attResults.length >= 2 && finalResults.length >= 1) {
+      // Normalize attestation scores to 0-100 for formula display
+      const att1Norm = attResults[0].maxPointsSum > 0
+        ? Math.min((attResults[0].score / attResults[0].maxPointsSum) * 100, 100)
+        : attResults[0].score;
+      const att2Norm = attResults[1].maxPointsSum > 0
+        ? Math.min((attResults[1].score / attResults[1].maxPointsSum) * 100, 100)
+        : attResults[1].score;
+      formulaBreakdown = {
+        att1Score: att1Norm,
+        att1Weight: attResults[0].weight,
+        att2Score: att2Norm,
+        att2Weight: attResults[1].weight,
+        finalScore: finalResults[0].score,
+        finalWeight: finalResults[0].weight,
+        total: weightedTotal,
+      };
+    }
+  }
 
   return {
     sectionResults,
     totalWeight,
     weightedTotal,
     hasInvalidWeights,
+    usesAttestationStructure: usesAttestation,
+    hasAttestationOverflow,
+    formulaBreakdown,
   };
 }
