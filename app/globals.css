@@ -127,21 +127,25 @@ select:focus-visible {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  max-width: 820px;
 }
 
 .nav-brand {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 15px;
-  color: var(--text);
+  color: var(--accent);
   text-decoration: none;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   white-space: nowrap;
   transition: opacity 0.15s;
 }
 
 .nav-brand:hover {
-  opacity: 0.65;
+  opacity: 0.75;
 }
 
 /* ── Pill Tabs ────────────────────────────────────── */
@@ -314,6 +318,18 @@ a.card:active {
   margin-top: 24px;
 }
 
+.home-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-card__icon {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
 .card-title {
   font-size: 15px;
   font-weight: 600;
@@ -377,13 +393,19 @@ select {
   color: var(--text);
   font-size: 14px;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+input:hover,
+select:hover {
+  border-color: var(--border-hover);
 }
 
 input:focus,
 select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: var(--surface);
 }
 
 input[readonly] {
@@ -469,10 +491,12 @@ input::placeholder {
 }
 
 .stat {
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+  position: relative;
+  overflow: hidden;
 }
 
 .stat span {
@@ -486,10 +510,11 @@ input::placeholder {
 
 .stat strong {
   display: block;
-  margin-top: 2px;
-  font-size: 18px;
+  margin-top: 4px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-highlight {
@@ -499,6 +524,7 @@ input::placeholder {
 
 .stat-highlight strong {
   color: var(--accent);
+  font-size: 22px;
 }
 
 /* ── Empty state (generic) ── */
@@ -1035,8 +1061,8 @@ input::placeholder {
 
 /* ── Remove Button ────────────────────────────────── */
 .remove {
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 6px 10px;
+  font-size: 12px;
   font-weight: 500;
   border: 1px solid var(--danger-border);
   border-radius: var(--radius);
@@ -1063,18 +1089,21 @@ input::placeholder {
   font-size: 13px;
   border: 1px solid var(--border);
   background: var(--hint-bg);
+  line-height: 1.5;
 }
 
 .message-ok {
   border-color: rgba(22, 163, 74, 0.25);
   background: var(--success-soft);
   color: var(--success);
+  border-left: 3px solid var(--success);
 }
 
 .message-warn {
   border-color: rgba(220, 38, 38, 0.25);
   background: var(--danger-soft);
   color: var(--danger);
+  border-left: 3px solid var(--danger);
 }
 
 /* ── Final Target ─────────────────────────────────── */

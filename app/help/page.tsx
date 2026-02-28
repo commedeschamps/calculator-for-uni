@@ -4,53 +4,53 @@ import NavTabs from '../components/NavTabs';
 
 const SCHOOLS = [
   {
-    name: 'School of Software Engineering',
-    abbr: 'SSE',
-    color: '#2563eb',
-    cabinet: 'C1.2.356',
-    email: 'sse@astanait.edu.kz',
-  },
-  {
     name: 'School of Artificial Intelligence and Data Science',
     abbr: 'SAIDS',
     color: '#7c3aed',
-    cabinet: 'C1.2.358',
-    email: 'saids@astanait.edu.kz',
+    cabinet: 'C1.1.322',
+    programs: 'IT, BDA, MCS, ADA, AAI, CSc',
+  },
+  {
+    name: 'School of Software Engineering',
+    abbr: 'SSE',
+    color: '#2563eb',
+    cabinet: 'C1.3.359',
+    programs: 'SE, CSE, CSD',
+  },
+  {
+    name: 'School of Cybersecurity',
+    abbr: 'SCS',
+    color: '#dc2626',
+    cabinet: 'C1.1.330',
+    programs: 'CS, SST, SSE',
   },
   {
     name: 'School of Intelligent Systems',
     abbr: 'SIS',
     color: '#0891b2',
-    cabinet: 'C1.2.354',
-    email: 'sis@astanait.edu.kz',
-  },
-  {
-    name: 'Cybersecurity School',
-    abbr: 'CSS',
-    color: '#dc2626',
-    cabinet: 'C1.2.352',
-    email: 'css@astanait.edu.kz',
+    cabinet: 'C1.1.321',
+    programs: 'ST, EE, IoT',
   },
   {
     name: 'School of Creative Industries',
     abbr: 'SCI',
     color: '#ea580c',
-    cabinet: 'C1.2.350',
-    email: 'sci@astanait.edu.kz',
+    cabinet: 'C1.3.353',
+    programs: 'MT, AIB, ITM, ITE, DJ, DBAIT, MT',
   },
   {
     name: 'School of Digital Public Administration',
     abbr: 'SDPA',
     color: '#16a34a',
-    cabinet: 'C1.2.348',
-    email: 'sdpa@astanait.edu.kz',
+    cabinet: 'C1.1.335',
+    programs: 'DPA, PM, PMD',
   },
   {
-    name: 'School of General Education Subjects',
-    abbr: 'SGES',
+    name: 'School of General Educational Disciplines',
+    abbr: 'SGED',
     color: '#6b7280',
-    cabinet: 'C1.2.346',
-    email: 'sges@astanait.edu.kz',
+    cabinet: 'C1.1.263',
+    programs: null,
   },
 ];
 
@@ -92,7 +92,7 @@ export default function HelpPage() {
               </div>
               <div className="school-card__contact">
                 <span className="school-card__detail">📍 {school.cabinet}</span>
-                <a className="school-card__detail school-card__email" href={`mailto:${school.email}`}>✉ {school.email}</a>
+                {school.programs && <span className="school-card__detail">🎓 {school.programs}</span>}
               </div>
             </article>
           ))}

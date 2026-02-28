@@ -6,32 +6,38 @@ const TOOLS = [
   {
     href: '/schedule',
     title: 'Schedule',
-    desc: 'Weekly timetable for SE-2411 with elective tracks, filters, and conflict analysis.',
+    icon: '📅',
+    desc: 'Weekly timetable with elective tracks and conflict detection.',
   },
   {
     href: '/course-grade',
     title: 'Course Grade',
-    desc: 'Calculate your course result from midterm, endterm, and final scores.',
+    icon: '🎯',
+    desc: 'Get your total from RegMid, RegEnd, and Final.',
   },
   {
     href: '/syllabus',
     title: 'Syllabus Builder',
-    desc: 'Create weighted grading templates and track your progress per course.',
+    icon: '📝',
+    desc: 'Track attestation grades and weights per course.',
   },
   {
     href: '/gpa',
     title: 'GPA Calculator',
-    desc: 'Add courses with credits and grades to compute your weighted GPA.',
+    icon: '📊',
+    desc: 'Compute weighted GPA from credits and grades.',
   },
   {
     href: '/final-target',
     title: 'Final Target',
-    desc: 'Find out what score you need on the final to reach your goal.',
+    icon: '🏁',
+    desc: 'See what final score you need to pass or get scholarship.',
   },
   {
     href: '/help',
     title: 'Academic Guide',
-    desc: 'AITU grading rules, formulas, GPA calculation, retake policies, and key contacts.',
+    icon: '🏫',
+    desc: 'Schools, departments, contacts, and grading rules.',
   },
 ];
 
@@ -45,9 +51,9 @@ export default function Home() {
       </div>
 
       <header className="page-header" style={{ paddingTop: 48, paddingBottom: 8 }}>
-        <h1 style={{ fontSize: 28 }}>Academic tools.</h1>
+        <h1 style={{ fontSize: 28 }}>Helper</h1>
         <p style={{ marginTop: 8, maxWidth: 440 }}>
-          A minimal set of calculators for course grades, GPA tracking, and exam planning.
+          Academic toolkit for AITU students.
         </p>
       </header>
 
@@ -56,9 +62,10 @@ export default function Home() {
           <Link
             key={tool.href}
             href={tool.href}
-            className="card"
+            className="card home-card"
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
           >
+            <span className="home-card__icon">{tool.icon}</span>
             <h2 className="card-title">
               {tool.title}
               <span className="card-arrow">&rarr;</span>
