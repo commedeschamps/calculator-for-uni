@@ -5,7 +5,17 @@ import AnimatedNumber from '../components/AnimatedNumber';
 import CopyButton from '../components/CopyButton';
 import PageLayout from '../components/PageLayout';
 import { useToast } from '../components/ToastProvider';
-import { createGpaCourse, formatScore, getLetterGradeInfo, isPercentage, totalToGradePoints, type GpaCourse } from '../lib/academic';
+import {
+  calculateGpaSummary,
+  createGpaCourse,
+  formatScore,
+  getAcademicOutcomeFromTotal,
+  normalizeCourseName,
+  parseInputValue,
+  SYLLABUS_GPA_LINK_STORAGE_KEY,
+  type GpaCourse,
+  type SyllabusLinkedGpaCourse,
+} from '../lib/academic';
 import { getBaseTemplates, getElectivePairs } from '../lib/syllabusTemplates';
 import { usePersistedState } from '../lib/usePersistedState';
 
@@ -15,53 +25,58 @@ const ELECTIVE_PAIRS = getElectivePairs();
 export default function GpaPage() {
   const [courses, setCourses] = usePersistedState<GpaCourse[]>('gpa-courses', [createGpaCourse(1), createGpaCourse(2)]);
   const [nextCourseId, setNextCourseId] = usePersistedState('gpa-nextId', 3);
+  const [linkedCourses] = usePersistedState<SyllabusLinkedGpaCourse[]>(SYLLABUS_GPA_LINK_STORAGE_KEY, []);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { showToast } = useToast();
 
-  const { totalCredits, gpa } = useMemo(() => {
-    let sumPoints = 0;
-    let sumCredits = 0;
+  const manualOverrideNames = useMemo(
+    () => new Set(courses.map((course) => normalizeCourseName(course.name)).filter(Boolean)),
+    [courses],
+  );
 
-    for (const course of courses) {
-      const credits = Number(course.credits);
-      const total = Number(course.total);
+  const visibleLinkedCourses = useMemo(
+    () =>
+      linkedCourses.filter((course) => !manualOverrideNames.has(normalizeCourseName(course.name))),
+    [linkedCourses, manualOverrideNames],
+  );
 
-      if (!Number.isFinite(credits) || credits <= 0 || !isPercentage(total)) {
-        continue;
-      }
+  const overriddenLinkedCount = linkedCourses.length - visibleLinkedCourses.length;
 
-      const gradePoints = totalToGradePoints(total);
-      sumPoints += credits * gradePoints;
-      sumCredits += credits;
-    }
+  const summary = useMemo(
+    () => calculateGpaSummary([...courses, ...visibleLinkedCourses]),
+    [courses, visibleLinkedCourses],
+  );
 
-    return {
-      totalCredits: sumCredits === 0 ? '0' : String(Math.round(sumCredits * 100) / 100),
-      gpa: sumCredits === 0 ? '0.00' : (sumPoints / sumCredits).toFixed(2),
-    };
-  }, [courses]);
+  const totalCredits = summary.totalCredits === 0 ? '0' : String(Math.round(summary.totalCredits * 100) / 100);
+  const gpa = summary.gpa.toFixed(2);
+  const totalCreditsDecimals = Number.isInteger(summary.totalCredits) ? 0 : 1;
 
   const copyAllText = useMemo(() => {
     const lines: string[] = [];
 
     for (const course of courses) {
-      const total = Number(course.total);
-      const letterInfo = isPercentage(total) ? getLetterGradeInfo(total) : null;
-      const points = isPercentage(total) ? totalToGradePoints(total) : null;
+      const total = parseInputValue(course.total);
+      const outcome = getAcademicOutcomeFromTotal(total);
       const name = course.name || 'Untitled';
       const cr = course.credits || '-';
-      const tot = isPercentage(total) ? formatScore(total) : '-';
-      const grade = letterInfo ? `${letterInfo.letter} (${points?.toFixed(2)})` : '-';
+      const tot = total !== null ? formatScore(total) : '-';
+      const grade = outcome.letterInfo ? `${outcome.letterInfo.letter} (${outcome.gradePoints?.toFixed(2)})` : '-';
       lines.push(`${name} | ${cr} cr | ${tot}% | ${grade}`);
+    }
+
+    for (const course of visibleLinkedCourses) {
+      const outcome = getAcademicOutcomeFromTotal(course.total);
+      const grade = outcome.letterInfo ? `${outcome.letterInfo.letter} (${outcome.gradePoints?.toFixed(2)})` : '-';
+      lines.push(`[Syllabus] ${course.name} | ${formatScore(course.credits, course.credits % 1 === 0 ? 0 : 1)} cr | ${formatScore(course.total)}% | ${grade}`);
     }
 
     lines.push('---');
     lines.push(`Total Credits: ${totalCredits}`);
     lines.push(`GPA: ${gpa}`);
     return lines.join('\n');
-  }, [courses, totalCredits, gpa]);
+  }, [courses, visibleLinkedCourses, totalCredits, gpa]);
 
   function handleAddCourse() {
     setCourses((prev) => [...prev, createGpaCourse(nextCourseId)]);
@@ -94,14 +109,14 @@ export default function GpaPage() {
   }
 
   function handleLoadTemplates() {
-    const existingNames = new Set(courses.map((c) => c.name.trim().toLowerCase()));
+    const existingNames = new Set(courses.map((course) => normalizeCourseName(course.name)).filter(Boolean));
     const toAdd: GpaCourse[] = [];
     let id = nextCourseId;
 
     for (const key of selectedKeys) {
       const tpl = [...BASE_TEMPLATES, ...ELECTIVE_PAIRS.flatMap((p) => p.templates)].find((t) => t.key === key);
       if (!tpl) continue;
-      if (existingNames.has(tpl.name.trim().toLowerCase())) continue;
+      if (existingNames.has(normalizeCourseName(tpl.name))) continue;
       toAdd.push({ id, name: tpl.name, credits: String(tpl.credits), total: '' });
       id += 1;
     }
@@ -197,9 +212,8 @@ export default function GpaPage() {
             <button className="btn btn-primary" type="button" onClick={handleAddCourse}>Add first course</button>
           </div>
         ) : courses.map((course) => {
-          const total = Number(course.total);
-          const letterInfo = isPercentage(total) ? getLetterGradeInfo(total) : null;
-          const points = isPercentage(total) ? totalToGradePoints(total) : null;
+          const total = parseInputValue(course.total);
+          const outcome = getAcademicOutcomeFromTotal(total);
 
           return (
             <div className="course-row course-row-5" key={course.id}>
@@ -229,7 +243,7 @@ export default function GpaPage() {
                 onChange={(event) => handleCourseChange(course.id, 'total', event.target.value)}
               />
               <span className="course-grade-badge">
-                {letterInfo ? `${letterInfo.letter} (${points?.toFixed(2)})` : '-'}
+                {outcome.letterInfo ? `${outcome.letterInfo.letter} (${outcome.gradePoints?.toFixed(2)})` : '-'}
               </span>
               <button className="remove" type="button" onClick={() => handleRemoveCourse(course.id)}>
                 Remove
@@ -245,15 +259,57 @@ export default function GpaPage() {
         </button>
       </div>
 
+      {visibleLinkedCourses.length > 0 ? (
+        <div className="card">
+          <h2>Linked From Syllabus</h2>
+          {overriddenLinkedCount > 0 ? (
+            <p className="message">
+              Manual entries with the same course name override {overriddenLinkedCount} linked course{overriddenLinkedCount > 1 ? 's' : ''}.
+            </p>
+          ) : null}
+
+          <div className="course-list">
+            <div className="course-row-header">
+              <span>Course name</span>
+              <span>Credits</span>
+              <span>Total (%)</span>
+              <span>Grade</span>
+              <span />
+            </div>
+
+            {visibleLinkedCourses.map((course) => {
+              const outcome = getAcademicOutcomeFromTotal(course.total);
+
+              return (
+                <div className="course-row course-row-5" key={`linked-${course.syllabusCourseId}`}>
+                  <input type="text" readOnly value={course.name} aria-label="Linked course name" />
+                  <input
+                    type="text"
+                    readOnly
+                    value={formatScore(course.credits, course.credits % 1 === 0 ? 0 : 1)}
+                    aria-label="Linked course credits"
+                  />
+                  <input type="text" readOnly value={formatScore(course.total)} aria-label="Linked course total" />
+                  <span className="course-grade-badge">
+                    {outcome.letterInfo ? `${outcome.letterInfo.letter} (${outcome.gradePoints?.toFixed(2)})` : '-'}
+                  </span>
+                  <span className="course-grade-badge">Syllabus</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       <div className="stats-grid stats-grid-2">
         <div className="stat stat-with-copy">
           <span>Total Credits</span>
-          <strong><AnimatedNumber value={Number(totalCredits)} decimals={0} /></strong>
+          <strong><AnimatedNumber value={summary.totalCredits} decimals={totalCreditsDecimals} /></strong>
           <CopyButton value={copyAllText} label="Copy all courses & GPA" />
         </div>
         <div className="stat stat-highlight stat-with-copy">
           <span>GPA</span>
-          <strong><AnimatedNumber value={Number(gpa)} decimals={2} /></strong>
+          <strong><AnimatedNumber value={summary.gpa} decimals={2} /></strong>
           <CopyButton value={gpa} label="Copy GPA" />
         </div>
       </div>

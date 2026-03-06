@@ -123,7 +123,9 @@ select:focus-visible {
   align-items: center;
   gap: 20px;
   padding: 16px 0;
-  margin-bottom: 8px;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto 8px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -131,7 +133,6 @@ select:focus-visible {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-  max-width: 820px;
 }
 
 .nav-brand {
@@ -152,6 +153,7 @@ select:focus-visible {
 .pill-tabs {
   display: flex;
   position: relative;
+  isolation: isolate;
   background: var(--surface);
   box-shadow: var(--shadow-pill);
   padding: 0.5rem;
@@ -159,7 +161,9 @@ select:focus-visible {
   margin-left: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
   scrollbar-width: none;
+  overscroll-behavior-x: contain;
 }
 
 .pill-tabs::-webkit-scrollbar {
@@ -222,18 +226,19 @@ select:focus-visible {
   text-decoration: none;
   border-radius: 99px;
   cursor: pointer;
-  transition: color 0.2s, transform 0.15s;
+  transition: color 0.22s ease, background-color 0.22s ease, opacity 0.22s ease;
   white-space: nowrap;
   position: relative;
+  backface-visibility: hidden;
 }
 
 .pill-tab:hover {
   color: var(--accent);
-  transform: scale(1.04);
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
 }
 
 .pill-tab:active {
-  transform: scale(0.97);
+  background: color-mix(in srgb, var(--accent-soft) 88%, transparent);
 }
 
 .pill-tab.active {
@@ -247,8 +252,30 @@ select:focus-visible {
   background: var(--accent-soft);
   z-index: 1;
   border-radius: 99px;
-  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+  left: 0;
   top: 0.5rem;
+  will-change: transform, width, opacity;
+  backface-visibility: hidden;
+}
+
+.glider--ready {
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill-tabs {
+    scroll-behavior: auto;
+  }
+
+  .pill-tabs-wrap::before,
+  .pill-tabs-wrap::after,
+  .pill-tab,
+  .glider--ready {
+    transition: none;
+  }
 }
 
 /* ── Page Header ──────────────────────────────────── */
@@ -679,12 +706,19 @@ input::placeholder {
   flex-wrap: wrap;
 }
 
-.syllabus-course-header .single-field {
+.syllabus-course-fields {
   flex: 1 1 420px;
   min-width: 280px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 120px;
 }
 
-.syllabus-course-header .single-field input {
+.syllabus-course-fields .single-field {
+  min-width: 0;
+}
+
+.syllabus-course-fields .single-field input {
   width: 100%;
 }
 
@@ -712,7 +746,7 @@ input::placeholder {
 .syllabus-section-header {
   display: grid;
   gap: 8px;
-  grid-template-columns: 2fr 130px auto;
+  grid-template-columns: minmax(0, 1fr) 130px 130px auto;
   align-items: flex-end;
 }
 
@@ -2124,6 +2158,11 @@ html.theme-transitioning *::after {
   .syllabus-section-header,
   .syllabus-item-row {
     grid-template-columns: 1fr;
+  }
+
+  .syllabus-course-fields {
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .syllabus-att-labels {

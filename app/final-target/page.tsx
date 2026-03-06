@@ -2,8 +2,8 @@
 
 import PageLayout from '../components/PageLayout';
 import {
-  getRequiredFinalForPassing,
-  getRequiredFinalForTarget,
+  getRequiredFinalForPassingDetails,
+  getRequiredFinalForTargetDetails,
   HIGH_SCHOLARSHIP_THRESHOLD,
   isPercentage,
   parseInputValue,
@@ -17,11 +17,11 @@ export default function FinalTargetPage() {
   const regTermNumber = parseInputValue(regTerm);
   const regTermValid = isPercentage(regTermNumber);
 
-  const requiredPass = regTermValid ? getRequiredFinalForPassing(regTermNumber) : '-';
-  const requiredScholar = regTermValid ? getRequiredFinalForTarget(regTermNumber, SCHOLARSHIP_THRESHOLD) : '-';
+  const requiredPass = regTermValid ? getRequiredFinalForPassingDetails(regTermNumber) : null;
+  const requiredScholar = regTermValid ? getRequiredFinalForTargetDetails(regTermNumber, SCHOLARSHIP_THRESHOLD) : null;
   const requiredUpperScholar = regTermValid
-    ? getRequiredFinalForTarget(regTermNumber, HIGH_SCHOLARSHIP_THRESHOLD)
-    : '-';
+    ? getRequiredFinalForTargetDetails(regTermNumber, HIGH_SCHOLARSHIP_THRESHOLD)
+    : null;
 
   return (
     <PageLayout
@@ -50,9 +50,9 @@ export default function FinalTargetPage() {
       ) : (
         <div className="hint-box" style={{ marginTop: 16 }}>
           <p className="hint-title">Predictions</p>
-          <p>Pass (&gt; 50): <strong>{requiredPass}</strong></p>
-          <p>Scholarship (&gt;= 70): <strong>{requiredScholar}</strong></p>
-          <p>Upper Scholarship (повышенная стипендия, &gt;= 90): <strong>{requiredUpperScholar}</strong></p>
+          <p>Pass (&gt; 50): <strong>{requiredPass ? requiredPass.displayValue : '-'}</strong></p>
+          <p>Scholarship (&gt;= 70): <strong>{requiredScholar ? requiredScholar.displayValue : '-'}</strong></p>
+          <p>Upper Scholarship (повышенная стипендия, &gt;= 90): <strong>{requiredUpperScholar ? requiredUpperScholar.displayValue : '-'}</strong></p>
         </div>
       )}
     </PageLayout>

@@ -1,3 +1,5 @@
+import type { SyllabusSectionKind } from './academic';
+
 // ── Pre-built syllabus templates for SE-2411 Term 6 ──
 // All courses follow the standard attestation structure:
 //   1st Attestation (30%) — each item has its own max points, sum = 100
@@ -16,7 +18,7 @@ export type SyllabusTemplate = {
   credits: number;
   category: 'base' | 'elective';
   pair?: number; // elective pair number
-  sections: { title: string; weight: string; items: SyllabusTemplateItem[] }[];
+  sections: { kind?: SyllabusSectionKind; title: string; weight: string; items: SyllabusTemplateItem[] }[];
 };
 
 export const SYLLABUS_TEMPLATES: SyllabusTemplate[] = [

@@ -7,65 +7,18 @@ import PageLayout from '../components/PageLayout';
 import { useToast } from '../components/ToastProvider';
 import { usePersistedState } from '../lib/usePersistedState';
 import {
+  getAcademicOutcomeFromTotal,
   calculateCourseTotal,
   calculateRegTerm,
   formatScore,
-  FX_MAX_EXCLUSIVE,
-  FX_MIN_EXCLUSIVE,
-  getLetterGradeInfo,
-  getRequiredFinalForPassing,
-  getRequiredFinalForTarget,
+  getCourseOutcomeFromExamInputs,
+  getRequiredFinalForPassingDetails,
+  getRequiredFinalForTargetDetails,
   HIGH_SCHOLARSHIP_THRESHOLD,
   isPercentage,
   parseInputValue,
-  PASSING_THRESHOLD,
-  RETAKE_THRESHOLD,
   SCHOLARSHIP_THRESHOLD,
-  type StatusTone,
 } from '../lib/academic';
-
-type StatusState = {
-  text: string;
-  tone: StatusTone;
-};
-
-function deriveStatus(
-  regTerm: number | null,
-  regMidNumber: number | null,
-  finalScoreNumber: number | null,
-  total: number | null,
-): StatusState {
-  if (regTerm === null) {
-    return { text: 'Set RegTerm directly or enter valid RegMid and RegEnd.', tone: 'warn' };
-  }
-  if (finalScoreNumber === null) {
-    return { text: 'Enter a final score to see your result.', tone: 'warn' };
-  }
-  if (!isPercentage(finalScoreNumber)) {
-    return { text: 'Final score must be between 0 and 100.', tone: 'warn' };
-  }
-  if (total === null) return { text: '-', tone: 'warn' };
-
-  if (regMidNumber !== null && regMidNumber < RETAKE_THRESHOLD && regTerm < RETAKE_THRESHOLD) {
-    return { text: 'Course retake required: RegMid < 25 and RegTerm < 25.', tone: 'warn' };
-  }
-  if (finalScoreNumber <= FX_MIN_EXCLUSIVE) {
-    return { text: 'Not passed: Final is 25 or below.', tone: 'warn' };
-  }
-  if (finalScoreNumber > FX_MIN_EXCLUSIVE && finalScoreNumber < FX_MAX_EXCLUSIVE) {
-    return { text: 'FX status: Final is between 25 and 50 (paid retake exam).', tone: 'warn' };
-  }
-  if (total <= PASSING_THRESHOLD) {
-    return { text: 'Not passed: total score must be above 50.', tone: 'warn' };
-  }
-  if (total >= HIGH_SCHOLARSHIP_THRESHOLD) {
-    return { text: 'Passed. Eligible for high scholarship (≥ 90).', tone: 'ok' };
-  }
-  if (total >= SCHOLARSHIP_THRESHOLD) {
-    return { text: 'Passed. Eligible for scholarship (≥ 70).', tone: 'ok' };
-  }
-  return { text: 'Passed the course (> 50).', tone: 'ok' };
-}
 
 export default function CourseGradePage() {
   const [regMid, setRegMid] = usePersistedState('cg-regMid', '');
@@ -86,10 +39,10 @@ export default function CourseGradePage() {
   const regTerm = isPercentage(regTermManualNumber) ? regTermManualNumber : regTermFromFormula;
   const regTermInputError = regTermInput.trim() !== '' && !isPercentage(regTermManualNumber);
 
-  const requiredPass = regTerm === null ? '-' : getRequiredFinalForPassing(regTerm);
-  const requiredScholar = regTerm === null ? '-' : getRequiredFinalForTarget(regTerm, SCHOLARSHIP_THRESHOLD);
+  const requiredPass = regTerm === null ? null : getRequiredFinalForPassingDetails(regTerm);
+  const requiredScholar = regTerm === null ? null : getRequiredFinalForTargetDetails(regTerm, SCHOLARSHIP_THRESHOLD);
   const requiredHighScholar =
-    regTerm === null ? '-' : getRequiredFinalForTarget(regTerm, HIGH_SCHOLARSHIP_THRESHOLD);
+    regTerm === null ? null : getRequiredFinalForTargetDetails(regTerm, HIGH_SCHOLARSHIP_THRESHOLD);
 
   const finalScoreNumber = parseInputValue(finalScore);
   const manualTotalNumber = parseInputValue(manualTotal);
@@ -107,11 +60,21 @@ export default function CourseGradePage() {
     : computedTotal;
 
   const letterGradeInputError = hasManualTotalInput && !isPercentage(manualTotalNumber);
-  const letterGradeInfo = getLetterGradeInfo(effectiveTotalForLetter);
+  const effectiveOutcome = useMemo(
+    () => getAcademicOutcomeFromTotal(effectiveTotalForLetter),
+    [effectiveTotalForLetter],
+  );
+  const letterGradeInfo = effectiveOutcome.letterInfo;
   const activeTotalSource = hasManualTotalInput ? 'Manual total' : 'Calculated total';
 
-  const courseStatus = useMemo(
-    () => deriveStatus(regTerm, regMidNumber, finalScoreNumber, computedTotal),
+  const courseOutcome = useMemo(
+    () =>
+      getCourseOutcomeFromExamInputs({
+        regTerm,
+        regMid: regMidNumber,
+        finalScore: finalScoreNumber,
+        total: computedTotal,
+      }),
     [regTerm, regMidNumber, finalScoreNumber, computedTotal],
   );
 
@@ -194,11 +157,11 @@ export default function CourseGradePage() {
                 `Letter Grade: ${letterGradeInfo ? letterGradeInfo.letter : '-'}`,
                 `Numeric: ${letterGradeInfo ? letterGradeInfo.numeric : '-'}`,
                 `Traditional: ${letterGradeInfo ? letterGradeInfo.traditional : '-'}`,
-                `Status: ${courseStatus.text}`,
+                `Status: ${courseOutcome.statusText}`,
                 `---`,
-                `Required for Pass (>50): ${requiredPass}`,
-                `Required for Scholarship (≥70): ${requiredScholar}`,
-                `Required for High Scholarship (≥90): ${requiredHighScholar}`,
+                `Required for Pass (>50): ${requiredPass ? requiredPass.displayValue : '-'}`,
+                `Required for Scholarship (≥70): ${requiredScholar ? requiredScholar.displayValue : '-'}`,
+                `Required for High Scholarship (≥90): ${requiredHighScholar ? requiredHighScholar.displayValue : '-'}`,
               ].join('\n')}
               label="Copy all results"
             />
@@ -233,15 +196,15 @@ export default function CourseGradePage() {
             </p>
             <p>
               Status:{' '}
-              <strong className={courseStatus.tone === 'ok' ? 'status-ok' : 'status-warn'}>{courseStatus.text}</strong>
+              <strong className={courseOutcome.statusTone === 'ok' ? 'status-ok' : 'status-warn'}>{courseOutcome.statusText}</strong>
             </p>
           </div>
 
           <div className="hint-box">
             <p className="hint-title">Required final forecast</p>
-            <p>Pass (&gt; 50): {requiredPass}</p>
-            <p>Scholarship (≥ 70): {requiredScholar}</p>
-            <p>High Scholarship (≥ 90): {requiredHighScholar}</p>
+            <p>Pass (&gt; 50): {requiredPass ? requiredPass.displayValue : '-'}</p>
+            <p>Scholarship (≥ 70): {requiredScholar ? requiredScholar.displayValue : '-'}</p>
+            <p>High Scholarship (≥ 90): {requiredHighScholar ? requiredHighScholar.displayValue : '-'}</p>
           </div>
         </article>
       </div>
