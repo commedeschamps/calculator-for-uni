@@ -203,9 +203,9 @@ export const SCHEDULE_DATA: ScheduleItem[] = [
   { id: sid(), day: 'Monday', startTime: '14:00', endTime: '14:50', subject: 'Academic Writing', classroom: 'C1.1.253P', type: 'practice', lecturer: 'Nazipa Ayubayeva', electiveGroup: 'Base', mode: 'offline' },
   { id: sid(), day: 'Monday', startTime: '15:00', endTime: '15:50', subject: 'Academic Writing', classroom: 'C1.1.253P', type: 'practice', lecturer: 'Nazipa Ayubayeva', electiveGroup: 'Base', mode: 'offline' },
   { id: sid(), day: 'Monday', startTime: '17:00', endTime: '17:50', subject: 'Cross-platform mobile development', classroom: 'C1.1.240K (Apple)', type: 'practice', lecturer: 'Makhmetova Kuralay', electiveGroup: 'Pair2', mode: 'offline' },
-  { id: sid(), day: 'Monday', startTime: '17:00', endTime: '17:50', subject: 'Advanced Programming 2', classroom: 'C1.2.123K (Huawei)', type: 'practice', lecturer: 'Nurlybek Taubakabyl', electiveGroup: 'Pair2', mode: 'offline' },
+  { id: sid(), day: 'Monday', startTime: '17:00', endTime: '17:50', subject: 'Advanced Programming 2', classroom: 'Huawei(C1.2.123K)', type: 'practice', lecturer: 'Nurlybek Taubakabyl', electiveGroup: 'Pair2', mode: 'offline' },
   { id: sid(), day: 'Monday', startTime: '18:00', endTime: '18:50', subject: 'Probability and Statistics', classroom: 'C1.1.252L', type: 'lecture', lecturer: 'Birzhan Ayanbayev', electiveGroup: 'Base', mode: 'offline' },
-  { id: sid(), day: 'Monday', startTime: '19:00', endTime: '19:50', subject: 'Probability and Statistics', classroom: 'C1.1.328L', type: 'lecture', lecturer: 'Birzhan Ayanbayev', electiveGroup: 'Base', mode: 'offline', notes: 'Room change' },
+  { id: sid(), day: 'Monday', startTime: '19:00', endTime: '19:50', subject: 'Probability and Statistics', classroom: 'C1.1.252L', type: 'lecture', lecturer: 'Birzhan Ayanbayev', electiveGroup: 'Base', mode: 'offline' },
 
   // ── Tuesday ──
   { id: sid(), day: 'Tuesday', startTime: '12:00', endTime: '12:50', subject: 'Introduction to Game Development', classroom: 'C1.1.357K', type: 'practice', lecturer: 'Kamila Zhakupova', electiveGroup: 'Pair1', mode: 'offline' },
@@ -244,7 +244,7 @@ export const SCHEDULE_DATA: ScheduleItem[] = [
   { id: sid(), day: 'Friday', startTime: '19:00', endTime: '19:50', subject: 'Advanced Operating Systems', classroom: null, type: 'practice', lecturer: 'Mehak Basharat', electiveGroup: 'Pair3', mode: 'online' },
 
   // ── Saturday ──
-  { id: sid(), day: 'Saturday', startTime: '17:00', endTime: '17:50', subject: 'Probability and Statistics', classroom: null, type: 'lecture', lecturer: null, electiveGroup: 'Base', mode: 'online', notes: 'learn.astanait.edu.kz' },
-  { id: sid(), day: 'Saturday', startTime: '18:00', endTime: '18:50', subject: 'Academic Writing', classroom: null, type: 'lecture', lecturer: null, electiveGroup: 'Base', mode: 'online', notes: 'learn.astanait.edu.kz' },
-  { id: sid(), day: 'Saturday', startTime: '19:00', endTime: '19:50', subject: 'Academic Writing', classroom: null, type: 'lecture', lecturer: null, electiveGroup: 'Base', mode: 'online', notes: 'learn.astanait.edu.kz' },
+  { id: sid(), day: 'Saturday', startTime: '17:00', endTime: '17:50', subject: 'Probability and Statistics', classroom: null, type: 'lecture', lecturer: null, electiveGroup: 'Base', mode: 'online', notes: 'https://learn.astanait.edu.kz/' },
+  { id: sid(), day: 'Saturday', startTime: '18:00', endTime: '18:50', subject: 'Academic Writing', classroom: null, type: 'lecture', lecturer: null, electiveGroup: 'Base', mode: 'online', notes: 'https://learn.astanait.edu.kz/' },
+  { id: sid(), day: 'Saturday', startTime: '19:00', endTime: '19:50', subject: 'Academic Writing', classroom: null, type: 'lecture', lecturer: null, electiveGroup: 'Base', mode: 'online', notes: 'https://learn.astanait.edu.kz/' },
 ];

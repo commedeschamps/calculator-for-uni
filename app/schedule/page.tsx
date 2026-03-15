@@ -52,22 +52,28 @@ function buildDefaultEnabled(): Set<string> {
 function ClassCard({ item }: { item: ScheduleItem }) {
   const isOnline = item.mode === 'online';
   return (
-    <div className={`sch-card sch-card--${item.type}${isOnline ? ' sch-card--online' : ''}`}>
-      <div className="sch-card__time">{item.startTime}–{item.endTime}</div>
-      <div className="sch-card__subject">{item.subject}</div>
-      <div className="sch-card__meta">
-        <span className={`sch-badge sch-badge--${item.type}`}>{item.type}</span>
-        {isOnline && <span className="sch-badge sch-badge--online">online</span>}
-        {item.electiveGroup !== 'Base' && (
-          <span className="sch-badge sch-badge--elective">elective</span>
-        )}
+    <article className={`sch-card sch-card--${item.type}${isOnline ? ' sch-card--online' : ''}`}>
+      <div className="sch-card__rail" aria-hidden="true">
+        <span className="sch-card__time">{item.startTime}</span>
+        <span className="sch-card__time-line" />
+        <span className="sch-card__time sch-card__time--end">{item.endTime}</span>
       </div>
-      <div className="sch-card__details">
-        {item.classroom ? <span>📍 {item.classroom}</span> : isOnline ? <span>🌐 Online</span> : null}
-        {item.lecturer && <span>👤 {item.lecturer}</span>}
+      <div className="sch-card__body">
+        <div className="sch-card__subject">{item.subject}</div>
+        <div className="sch-card__meta">
+          <span className={`sch-badge sch-badge--${item.type}`}>{item.type}</span>
+          {isOnline && <span className="sch-badge sch-badge--online">online</span>}
+          {item.electiveGroup !== 'Base' && (
+            <span className="sch-badge sch-badge--elective">elective</span>
+          )}
+        </div>
+        <div className="sch-card__details">
+          {item.classroom ? <span>📍 {item.classroom}</span> : isOnline ? <span>🌐 Online</span> : null}
+          {item.lecturer && <span>👤 {item.lecturer}</span>}
+        </div>
+        {item.notes && <div className="sch-card__notes">{item.notes}</div>}
       </div>
-      {item.notes && <div className="sch-card__notes">{item.notes}</div>}
-    </div>
+    </article>
   );
 }
 
@@ -313,20 +319,37 @@ function GridView({ byDay }: { byDay: Partial<Record<DayOfWeek, ScheduleItem[]>>
 
   return (
     <div className="sch-table-wrap">
-      <div className="sch-grid" style={{ gridTemplateColumns: `repeat(${activeDays.length}, 1fr)` }}>
-        {activeDays.map((day) => (
-          <div key={day} className="sch-day-col">
-            <div className="sch-day-header">
-              <span className="sch-day-short">{DAY_SHORT[day]}</span>
-              <span className="sch-day-count">{byDay[day]!.length}</span>
-            </div>
-            <div className="sch-day-cards">
-              {byDay[day]!.map((item) => (
-                <ClassCard key={item.id} item={item} />
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="sch-grid" style={{ gridTemplateColumns: `repeat(${activeDays.length}, minmax(270px, 1fr))` }}>
+        {activeDays.map((day) => {
+          const items = byDay[day]!;
+          const onlineCount = items.filter((item) => item.mode === 'online').length;
+          const dayModeLabel = onlineCount === 0
+            ? 'offline only'
+            : onlineCount === items.length
+              ? 'online only'
+              : `${onlineCount} online`;
+
+          return (
+            <section key={day} className="sch-day-col">
+              <div className="sch-day-header">
+                <div className="sch-day-header__copy">
+                  <span className="sch-day-short">{DAY_SHORT[day]}</span>
+                  <h3 className="sch-day-name">{day}</h3>
+                </div>
+                <span className="sch-day-count">{items.length}</span>
+              </div>
+              <div className="sch-day-meta">
+                <span>{items[0].startTime} - {items[items.length - 1].endTime}</span>
+                <span>{dayModeLabel}</span>
+              </div>
+              <div className="sch-day-cards">
+                {items.map((item) => (
+                  <ClassCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );
