@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import SuccessToastNotification from '@/components/ui/success-toast-notification';
 
 type Toast = {
   id: number;
@@ -39,31 +40,17 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-container" aria-live="polite">
         {toasts.map((toast) => (
-          <div key={toast.id} className="toast">
-            <span className="toast-message">{toast.message}</span>
-            <div className="toast-actions">
-              {toast.onUndo ? (
-                <button
-                  type="button"
-                  className="toast-undo"
-                  onClick={() => {
-                    toast.onUndo?.();
-                    dismiss(toast.id);
-                  }}
-                >
-                  Undo
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="toast-dismiss"
-                onClick={() => dismiss(toast.id)}
-                aria-label="Dismiss"
-              >
-                ×
-              </button>
-            </div>
-          </div>
+          <SuccessToastNotification
+            key={toast.id}
+            title={toast.message}
+            description={toast.onUndo ? 'You can still undo this action for a few seconds.' : 'Your latest change was saved in the current view.'}
+            actionLabel={toast.onUndo ? 'Undo' : undefined}
+            onAction={toast.onUndo ? () => {
+              toast.onUndo?.();
+              dismiss(toast.id);
+            } : undefined}
+            onClose={() => dismiss(toast.id)}
+          />
         ))}
       </div>
     </ToastContext.Provider>

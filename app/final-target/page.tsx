@@ -24,36 +24,87 @@ export default function FinalTargetPage() {
     : null;
 
   return (
-    <PageLayout
-      title="Final Target"
-      description="Enter RegTerm to get required final prediction for pass, scholarship, and upper scholarship."
-    >
-      <div className="field-grid field-grid-2">
-        <label>
-          RegTerm (0-100)
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            placeholder="e.g. 75"
-            value={regTerm}
-            onChange={(event) => setRegTerm(event.target.value)}
-          />
-        </label>
-      </div>
+    <PageLayout title="Final Target">
+      <section className="card section-block">
+        <div className="section-head">
+          <div>
+            <h2>Summary</h2>
+          </div>
+        </div>
 
-      <p className="error-text">{!regTermValid && regTerm.trim() !== '' ? 'RegTerm must be between 0 and 100.' : ''}</p>
+        <div className="stats-grid">
+          <div className="stat">
+            <span>RegTerm</span>
+            <strong>{regTermValid ? regTerm : '-'}</strong>
+          </div>
+          <div className="stat">
+            <span>Pass</span>
+            <strong>{requiredPass ? requiredPass.displayValue : '-'}</strong>
+          </div>
+          <div className="stat">
+            <span>Scholarship</span>
+            <strong>{requiredScholar ? requiredScholar.displayValue : '-'}</strong>
+          </div>
+          <div className="stat">
+            <span>High</span>
+            <strong>{requiredUpperScholar ? requiredUpperScholar.displayValue : '-'}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="card section-block">
+          <div className="section-head">
+            <div>
+              <h2>Input</h2>
+            </div>
+          </div>
+
+        <div className="field-grid field-grid-2">
+          <label>
+            RegTerm (0-100)
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              placeholder="e.g. 75"
+              value={regTerm}
+              onChange={(event) => setRegTerm(event.target.value)}
+            />
+          </label>
+        </div>
+
+        <p className="error-text">{!regTermValid && regTerm.trim() !== '' ? 'RegTerm must be between 0 and 100.' : ''}</p>
+      </section>
 
       {!regTermValid ? (
-        <p className="message">Enter a valid RegTerm to see predictions.</p>
+        <p className="message">Enter a valid RegTerm to view the required final scores.</p>
       ) : (
-        <div className="hint-box" style={{ marginTop: 16 }}>
-          <p className="hint-title">Predictions</p>
-          <p>Pass (&gt; 50): <strong>{requiredPass ? requiredPass.displayValue : '-'}</strong></p>
-          <p>Scholarship (&gt;= 70): <strong>{requiredScholar ? requiredScholar.displayValue : '-'}</strong></p>
-          <p>Upper Scholarship (повышенная стипендия, &gt;= 90): <strong>{requiredUpperScholar ? requiredUpperScholar.displayValue : '-'}</strong></p>
-        </div>
+        <section className="forecast-grid">
+          <article className="card forecast-card">
+            <div className="forecast-card__top">
+              <span className="forecast-card__label">Pass</span>
+              <span className="forecast-card__threshold">&gt; 50</span>
+            </div>
+            <div className="forecast-card__value">{requiredPass ? requiredPass.displayValue : '-'}</div>
+          </article>
+
+          <article className="card forecast-card">
+            <div className="forecast-card__top">
+              <span className="forecast-card__label">Scholarship</span>
+              <span className="forecast-card__threshold">≥ 70</span>
+            </div>
+            <div className="forecast-card__value">{requiredScholar ? requiredScholar.displayValue : '-'}</div>
+          </article>
+
+          <article className="card forecast-card">
+            <div className="forecast-card__top">
+              <span className="forecast-card__label">High Scholarship</span>
+              <span className="forecast-card__threshold">≥ 90</span>
+            </div>
+            <div className="forecast-card__value">{requiredUpperScholar ? requiredUpperScholar.displayValue : '-'}</div>
+          </article>
+        </section>
       )}
     </PageLayout>
   );

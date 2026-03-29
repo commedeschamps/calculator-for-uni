@@ -693,7 +693,11 @@ export function calculateSyllabusCourseResult(course: SyllabusCourse): SyllabusC
       maxPointsSum = section.items.length * 25;
     }
 
-    const maxPointsMismatch = isAttestation && !approxEqual(maxPointsSum, ATTESTATION_SECTION_MAX);
+    const maxPointsMismatch =
+      isAttestation &&
+      maxPointsSum > 0 &&
+      !approxEqual(maxPointsSum, ATTESTATION_SECTION_MAX) &&
+      !approxEqual(maxPointsSum, weight);
     const score = isAttestation ? rawSum : gradedCount > 0 ? rawSum / gradedCount : 0;
     const normalizedScore = isAttestation && maxPointsSum > 0 ? (rawSum / maxPointsSum) * 100 : score;
     const overflowAmount = isAttestation ? Math.max(0, rawSum - maxPointsSum) : 0;

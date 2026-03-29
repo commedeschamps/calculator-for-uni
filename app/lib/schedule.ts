@@ -47,6 +47,16 @@ export const DAY_SHORT: Record<DayOfWeek, string> = {
   Saturday: 'Sat',
 };
 
+const JS_DAY_TO_SCHEDULE_DAY: Array<DayOfWeek | null> = [
+  null,
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
 export const SLOT_MINUTES = 55;
 
 export const ALL_TRACKS: ElectiveGroup[] = ['Base', 'Pair1', 'Pair2', 'Pair3'];
@@ -188,6 +198,32 @@ export function getTimeRange(items: ScheduleItem[]): { earliest: number; latest:
     if (e > latest) latest = e;
   }
   return { earliest, latest };
+}
+
+export function getScheduleDayForDate(date: Date): DayOfWeek | null {
+  return JS_DAY_TO_SCHEDULE_DAY[date.getDay()] ?? null;
+}
+
+export function getRecommendedDay(items: ScheduleItem[], date: Date = new Date()): DayOfWeek | null {
+  const daysWithItems = DAYS.filter((day) => items.some((item) => item.day === day));
+  if (daysWithItems.length === 0) {
+    return null;
+  }
+
+  const today = getScheduleDayForDate(date);
+  if (today && daysWithItems.includes(today)) {
+    return today;
+  }
+
+  const startIndex = today ? DAYS.indexOf(today) : -1;
+  for (let offset = 1; offset <= DAYS.length; offset++) {
+    const nextDay = DAYS[(startIndex + offset + DAYS.length) % DAYS.length];
+    if (daysWithItems.includes(nextDay)) {
+      return nextDay;
+    }
+  }
+
+  return daysWithItems[0];
 }
 
 // ── SE-2411 Schedule Data ────────────────────────────

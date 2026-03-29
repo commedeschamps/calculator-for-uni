@@ -1,6 +1,4 @@
-import Link from 'next/link';
-import ThemeToggle from '../components/ThemeToggle';
-import NavTabs from '../components/NavTabs';
+import PageLayout from '../components/PageLayout';
 
 const SCHOOLS = [
   {
@@ -69,19 +67,43 @@ const DEPARTMENTS = [
 
 export default function HelpPage() {
   return (
-    <main className="app-shell">
-      <div className="top-bar">
-        <Link href="/" className="nav-brand">Helper</Link>
-        <NavTabs />
-        <ThemeToggle />
-      </div>
+    <PageLayout title="AITU Guide">
+      <section className="card section-block">
+        <div className="section-head">
+          <div>
+            <h2>Contacts</h2>
+          </div>
+          <div className="row-actions">
+            <a className="btn btn-primary" href="https://astanait.edu.kz" target="_blank" rel="noopener noreferrer">
+              Site
+            </a>
+            <a className="btn btn-muted" href="mailto:info@astanait.edu.kz">
+              Email
+            </a>
+          </div>
+        </div>
 
-      <header className="page-header" style={{ paddingTop: 28 }}>
-        <h1>AITU Schools &amp; Departments</h1>
-        <p>{SCHOOLS.length} schools · {DEPARTMENTS.length} offices &amp; departments</p>
-      </header>
+        <div className="stats-grid">
+          <div className="stat">
+            <span>Schools</span>
+            <strong>{SCHOOLS.length}</strong>
+          </div>
+          <div className="stat">
+            <span>Departments</span>
+            <strong>{DEPARTMENTS.length}</strong>
+          </div>
+          <div className="stat">
+            <span>Main block</span>
+            <strong>C1</strong>
+          </div>
+          <div className="stat">
+            <span>Admissions</span>
+            <strong>1st floor</strong>
+          </div>
+        </div>
+      </section>
 
-      <section id="main" className="content help-content">
+      <div className="help-content">
         <h2 className="help-section-title">Schools</h2>
         <div className="schools-grid">
           {SCHOOLS.map((school) => (
@@ -98,7 +120,7 @@ export default function HelpPage() {
           ))}
         </div>
 
-        <h2 className="help-section-title" style={{ marginTop: 32 }}>Offices &amp; Departments</h2>
+        <h2 className="help-section-title help-section-title--offset">Offices &amp; Departments</h2>
         <div className="dept-list">
           {DEPARTMENTS.map((dept) => (
             <div key={dept.name} className="card dept-row">
@@ -112,11 +134,7 @@ export default function HelpPage() {
           ))}
         </div>
 
-        <p className="help-footer">
-          Source: AITU 2025–2026. For full details see{' '}
-          <a href="https://astanait.edu.kz" target="_blank" rel="noopener noreferrer">astanait.edu.kz</a>
-        </p>
-      </section>
-    </main>
+      </div>
+    </PageLayout>
   );
 }

@@ -136,25 +136,57 @@ export default function GpaPage() {
   }, 0);
 
   return (
-    <PageLayout title="GPA Calculator" description="Add courses with credits and total grade to compute your weighted GPA.">
-      {/* Template picker */}
-      <div className="template-picker" style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-        <button
-          type="button"
-          className="gpa-template-toggle"
-          onClick={() => setPickerOpen((v) => !v)}
-          aria-expanded={pickerOpen}
-        >
-          <span className="gpa-template-toggle__label">📋 Load from templates</span>
-          <span className={`gpa-template-toggle__arrow ${pickerOpen ? 'gpa-template-toggle__arrow--open' : ''}`}>▸</span>
-        </button>
+    <PageLayout title="GPA Calculator">
+      <section className="card section-block">
+        <div className="section-head">
+          <div>
+            <h2>Summary</h2>
+          </div>
+          <div className="row-actions">
+            <button className="btn btn-primary" type="button" onClick={() => setPickerOpen((v) => !v)}>
+              {pickerOpen ? 'Hide templates' : 'Templates'}
+            </button>
+            <button className="btn btn-muted" type="button" onClick={handleAddCourse}>
+              Add course
+            </button>
+          </div>
+        </div>
 
-        {pickerOpen && (
-          <>
-            <p className="template-picker__sub">SE-2411 Term 6 — pick courses to add with pre-filled name & credits</p>
+        <div className="stats-grid">
+          <div className="stat">
+            <span>Manual</span>
+            <strong>{courses.length}</strong>
+          </div>
+          <div className="stat">
+            <span>Linked</span>
+            <strong>{visibleLinkedCourses.length}</strong>
+          </div>
+          <div className="stat">
+            <span>Total Credits</span>
+            <strong>{totalCredits}</strong>
+          </div>
+          <div className="stat">
+            <span>GPA</span>
+            <strong>{gpa}</strong>
+          </div>
+        </div>
+      </section>
 
-            <div className="template-picker__group">
-              <span className="template-picker__label">Core subjects</span>
+      {pickerOpen && (
+        <div className="card template-picker">
+          <div className="template-picker__top">
+            <div>
+              <h2 className="template-picker__title">Templates</h2>
+            </div>
+            <div className="template-picker__mini">
+              <span>{selectedKeys.length} selected</span>
+              <strong>{selectedCredits} cr.</strong>
+            </div>
+          </div>
+
+          <div className="template-picker__group">
+            <span className="template-picker__label">Core</span>
+            <div className="template-picker__grid">
               {BASE_TEMPLATES.map((t) => (
                 <label key={t.key} className={`template-chip ${selectedKeys.includes(t.key) ? 'template-chip--active' : ''}`}>
                   <input type="checkbox" checked={selectedKeys.includes(t.key)} onChange={() => toggleTemplate(t.key)} />
@@ -163,13 +195,15 @@ export default function GpaPage() {
                 </label>
               ))}
             </div>
+          </div>
 
-            {ELECTIVE_PAIRS.map((group) => (
-              <div key={group.pair} className="template-picker__group">
-                <span className="template-picker__label">
-                  {group.label}
-                  <span className="template-picker__hint">(pick one)</span>
-                </span>
+          {ELECTIVE_PAIRS.map((group) => (
+            <div key={group.pair} className="template-picker__group">
+              <span className="template-picker__label">
+                {group.label}
+                <span className="template-picker__hint">pick one</span>
+              </span>
+              <div className="template-picker__grid">
                 {group.templates.map((t) => (
                   <label key={t.key} className={`template-chip template-chip--elective ${selectedKeys.includes(t.key) ? 'template-chip--active' : ''}`}>
                     <input type="checkbox" checked={selectedKeys.includes(t.key)} onChange={() => toggleTemplate(t.key)} />
@@ -178,93 +212,101 @@ export default function GpaPage() {
                   </label>
                 ))}
               </div>
-            ))}
-
-            <div className="template-picker__footer">
-              <span className="template-picker__total">
-                {selectedKeys.length} selected · {selectedCredits} credits
-              </span>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                disabled={selectedKeys.length === 0}
-                onClick={handleLoadTemplates}
-              >
-                Load selected
-              </button>
             </div>
-          </>
-        )}
-      </div>
+          ))}
 
-      <div className="course-list">
-        <div className="course-row-header">
-          <span>Course name</span>
-          <span>Credits</span>
-          <span>Total (%)</span>
-          <span>Grade</span>
-          <span />
-        </div>
-        {courses.length === 0 ? (
-          <div className="empty-state">
-            <span className="empty-state__icon">📚</span>
-            <p>No courses yet</p>
-            <button className="btn btn-primary" type="button" onClick={handleAddCourse}>Add first course</button>
+          <div className="template-picker__footer">
+            <span className="template-picker__total">
+              {selectedKeys.length} selected · {selectedCredits} credits
+            </span>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={selectedKeys.length === 0}
+              onClick={handleLoadTemplates}
+            >
+              Load selected
+            </button>
           </div>
-        ) : courses.map((course) => {
-          const total = parseInputValue(course.total);
-          const outcome = getAcademicOutcomeFromTotal(total);
+        </div>
+      )}
 
-          return (
-            <div className="course-row course-row-5" key={course.id}>
-              <input
-                type="text"
-                placeholder="Course name"
-                aria-label="Course name"
-                value={course.name}
-                onChange={(event) => handleCourseChange(course.id, 'name', event.target.value)}
-              />
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                placeholder="Credits"
-                aria-label="Credits"
-                value={course.credits}
-                onChange={(event) => handleCourseChange(course.id, 'credits', event.target.value)}
-              />
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                placeholder="Total (%)"
-                value={course.total}
-                onChange={(event) => handleCourseChange(course.id, 'total', event.target.value)}
-              />
-              <span className="course-grade-badge">
-                {outcome.letterInfo ? `${outcome.letterInfo.letter} (${outcome.gradePoints?.toFixed(2)})` : '-'}
-              </span>
-              <button className="remove" type="button" onClick={() => handleRemoveCourse(course.id)}>
-                Remove
-              </button>
+      <section className="card section-block">
+          <div className="section-head">
+            <div>
+              <h2>Manual Courses</h2>
             </div>
-          );
-        })}
-      </div>
+            <CopyButton value={copyAllText} label="Copy all courses & GPA" />
+          </div>
 
-      <div className="actions">
-        <button className="btn btn-muted" type="button" onClick={handleAddCourse}>
-          Add Course
-        </button>
-      </div>
+        <div className="course-list">
+          <div className="course-row-header">
+            <span>Course name</span>
+            <span>Credits</span>
+            <span>Total (%)</span>
+            <span>Grade</span>
+            <span />
+          </div>
+          {courses.length === 0 ? (
+            <div className="empty-state">
+              <span className="empty-state__icon">📚</span>
+              <p>No courses yet</p>
+              <button className="btn btn-primary" type="button" onClick={handleAddCourse}>Add first course</button>
+            </div>
+          ) : courses.map((course) => {
+            const total = parseInputValue(course.total);
+            const outcome = getAcademicOutcomeFromTotal(total);
+
+            return (
+              <div className="course-row course-row-5" key={course.id}>
+                <input
+                  type="text"
+                  placeholder="Course name"
+                  aria-label="Course name"
+                  value={course.name}
+                  onChange={(event) => handleCourseChange(course.id, 'name', event.target.value)}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="Credits"
+                  aria-label="Credits"
+                  value={course.credits}
+                  onChange={(event) => handleCourseChange(course.id, 'credits', event.target.value)}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="Total (%)"
+                  value={course.total}
+                  onChange={(event) => handleCourseChange(course.id, 'total', event.target.value)}
+                />
+                <span className="course-grade-badge">
+                  {outcome.letterInfo ? `${outcome.letterInfo.letter} (${outcome.gradePoints?.toFixed(2)})` : '-'}
+                </span>
+                <button className="remove" type="button" onClick={() => handleRemoveCourse(course.id)}>
+                  Remove
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {visibleLinkedCourses.length > 0 ? (
-        <div className="card">
-          <h2>Linked From Syllabus</h2>
+        <div className="card section-block">
+          <div className="section-head">
+            <div>
+              <h2>Linked From Syllabus</h2>
+            </div>
+          </div>
+
           {overriddenLinkedCount > 0 ? (
             <p className="message">
-              Manual entries with the same course name override {overriddenLinkedCount} linked course{overriddenLinkedCount > 1 ? 's' : ''}.
+              Manual entries with the same course name replace {overriddenLinkedCount} linked course{overriddenLinkedCount > 1 ? 's' : ''}.
             </p>
           ) : null}
 

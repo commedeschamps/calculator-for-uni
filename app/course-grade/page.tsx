@@ -78,6 +78,12 @@ export default function CourseGradePage() {
     [regTerm, regMidNumber, finalScoreNumber, computedTotal],
   );
 
+  const forecastCards = [
+    { label: 'Pass', threshold: '> 50', details: requiredPass },
+    { label: 'Scholarship', threshold: '≥ 70', details: requiredScholar },
+    { label: 'High Scholarship', threshold: '≥ 90', details: requiredHighScholar },
+  ];
+
   function handleFieldChange(setter: (value: string) => void) {
     return (event: ChangeEvent<HTMLInputElement>) => setter(event.target.value);
   }
@@ -99,10 +105,45 @@ export default function CourseGradePage() {
   }
 
   return (
-    <PageLayout title="Course Grade" description="Calculate your course result using midterm, endterm, and final scores.">
+    <PageLayout title="Course Grade">
+      <section className="card section-block">
+        <div className="section-head">
+          <div>
+            <h2>Summary</h2>
+          </div>
+          <button className="btn btn-muted" type="button" onClick={handleReset}>
+            Reset
+          </button>
+        </div>
+
+        <div className="stats-grid">
+          <div className="stat">
+            <span>RegTerm</span>
+            <strong>{regTerm === null ? '-' : formatScore(regTerm, 1)}</strong>
+          </div>
+          <div className="stat">
+            <span>Computed Total</span>
+            <strong>{computedTotal === null ? '-' : formatScore(computedTotal, 1)}</strong>
+          </div>
+          <div className="stat">
+            <span>Active Total</span>
+            <strong>{effectiveTotalForLetter === null ? '-' : formatScore(effectiveTotalForLetter, 1)}</strong>
+          </div>
+          <div className="stat">
+            <span>Letter</span>
+            <strong>{letterGradeInfo ? letterGradeInfo.letter : '-'}</strong>
+          </div>
+        </div>
+      </section>
+
       <div className="split-layout">
         <article className="card">
-          <h2>Input</h2>
+          <div className="section-head">
+            <div>
+              <h2>Inputs</h2>
+            </div>
+          </div>
+
           <div className="field-grid field-grid-2">
             <label>
               RegMid (0-100)
@@ -138,17 +179,13 @@ export default function CourseGradePage() {
 
           <p className="error-text">{letterGradeInputError ? 'Total must be between 0 and 100.' : ''}</p>
           <p className="error-text">{regTermInputError ? 'RegTerm must be between 0 and 100.' : ''}</p>
-
-          <div className="actions">
-            <button className="btn btn-muted" type="button" onClick={handleReset}>
-              Reset
-            </button>
-          </div>
         </article>
 
         <article className="card">
-          <h2 className="section-header-with-copy">
-            Results
+          <div className="section-head">
+            <div>
+              <h2>Results</h2>
+            </div>
             <CopyButton
               value={[
                 `RegTerm: ${regTerm === null ? '-' : formatScore(regTerm)}`,
@@ -165,7 +202,7 @@ export default function CourseGradePage() {
               ].join('\n')}
               label="Copy all results"
             />
-          </h2>
+          </div>
 
           <div className="stats-grid">
             <div className="stat">
@@ -199,15 +236,20 @@ export default function CourseGradePage() {
               <strong className={courseOutcome.statusTone === 'ok' ? 'status-ok' : 'status-warn'}>{courseOutcome.statusText}</strong>
             </p>
           </div>
-
-          <div className="hint-box">
-            <p className="hint-title">Required final forecast</p>
-            <p>Pass (&gt; 50): {requiredPass ? requiredPass.displayValue : '-'}</p>
-            <p>Scholarship (≥ 70): {requiredScholar ? requiredScholar.displayValue : '-'}</p>
-            <p>High Scholarship (≥ 90): {requiredHighScholar ? requiredHighScholar.displayValue : '-'}</p>
-          </div>
         </article>
       </div>
+
+      <section className="forecast-grid">
+        {forecastCards.map((card) => (
+          <article key={card.label} className={`card forecast-card${card.details && !card.details.achievable ? ' forecast-card--impossible' : ''}`}>
+            <div className="forecast-card__top">
+              <span className="forecast-card__label">{card.label}</span>
+              <span className="forecast-card__threshold">{card.threshold}</span>
+            </div>
+            <div className="forecast-card__value">{card.details ? card.details.displayValue : '-'}</div>
+          </article>
+        ))}
+      </section>
     </PageLayout>
   );
 }
