@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  BarChart3,
   CalendarDays,
   CalendarRange,
   Clock3,
-  MapPinned,
   RotateCcw,
-  FileText,
 } from 'lucide-react';
+import NextLessonCard from '@/app/components/NextLessonCard';
+import { Button } from '@/components/tailgrids/core/button';
 import BasicDatePicker from '@/components/ui/calendar-1';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { extractCampusLocation } from '../lib/campusMap';
@@ -21,17 +20,13 @@ import {
   DAY_SHORT,
   SCHEDULE_DATA,
   PAIR_LABELS,
-  detectConflicts,
-  detectGaps,
   getFilteredItems,
   getScheduleDayForDate,
+  getUpcomingClass,
   getRecommendedDay,
-  getTimeRange,
   getUniqueSubjects,
   getUniqueValues,
   groupByDay,
-  formatMinutesToTime,
-  parseTimeToMinutes,
 } from '../lib/schedule';
 
 type ViewMode = 'table' | 'list' | 'calendar';
@@ -141,10 +136,6 @@ function formatLocation(location: ReturnType<typeof extractCampusLocation>) {
   return `${location.blockLabel} • ${location.floorNumber}F`;
 }
 
-function getLessonLocation(item: ScheduleItem): string {
-  return item.classroom ?? 'Online';
-}
-
 function renderNotes(notes: string) {
   if (/^https?:\/\//i.test(notes)) {
     return (
@@ -163,43 +154,6 @@ function getDayTimeLabel(items: ScheduleItem[]): string | null {
   }
 
   return `${items[0].startTime} - ${items[items.length - 1].endTime}`;
-}
-
-function getUpcomingClass(
-  items: ScheduleItem[],
-  date: Date = new Date(),
-): { day: DayOfWeek; item: ScheduleItem } | null {
-  const grouped = groupByDay(items);
-  const today = getScheduleDayForDate(date);
-  const nowMinutes = date.getHours() * 60 + date.getMinutes();
-
-  if (today) {
-    const todayItems = grouped[today] ?? [];
-    const upcomingToday = todayItems.find((item) => parseTimeToMinutes(item.endTime) >= nowMinutes);
-
-    if (upcomingToday) {
-      return {
-        day: today,
-        item: upcomingToday,
-      };
-    }
-  }
-
-  const startIndex = today ? DAYS.indexOf(today) : -1;
-
-  for (let offset = 1; offset <= DAYS.length; offset += 1) {
-    const day = DAYS[(startIndex + offset + DAYS.length) % DAYS.length];
-    const firstItem = grouped[day]?.[0];
-
-    if (firstItem) {
-      return {
-        day,
-        item: firstItem,
-      };
-    }
-  }
-
-  return null;
 }
 
 function ClassCard({ item }: { item: ScheduleItem }) {
@@ -242,8 +196,8 @@ function ClassCard({ item }: { item: ScheduleItem }) {
 function EmptyState() {
   return (
     <div className="sch-empty">
-      <span className="sch-empty__icon">📭</span>
-      <p>No classes match your current selection.</p>
+      <CalendarDays className="sch-empty__icon h-6 w-6" aria-hidden="true" />
+      <p>No classes match this setup. Try another day, teacher, or subject mix.</p>
     </div>
   );
 }
@@ -285,83 +239,9 @@ function DayPicker({
   );
 }
 
-function ScheduleSummaryBar({
-  nextClass,
-  totalClasses,
-  offlineCount,
-  onlineCount,
-  activeDayCount,
-  weekWindow,
-  conflictsCount,
-  gapsCount,
-  recommendedDay,
-  onPickRecommendedDay,
-}: {
-  nextClass: { day: DayOfWeek; item: ScheduleItem } | null;
-  totalClasses: number;
-  offlineCount: number;
-  onlineCount: number;
-  activeDayCount: number;
-  weekWindow: string;
-  conflictsCount: number;
-  gapsCount: number;
-  recommendedDay: DayOfWeek | null;
-  onPickRecommendedDay: () => void;
-}) {
-  const mapHref = nextClass ? buildMapHref(nextClass.item) : null;
-  const location = nextClass ? formatLocation(extractCampusLocation(nextClass.item.classroom)) : null;
-
-  return (
-    <section className="card sch-summary-bar">
-      <div className="sch-summary-bar__head">
-        <div className="sch-summary-bar__title">
-          <h1>Schedule</h1>
-          <div className="sch-summary-bar__chips">
-            <span>{totalClasses} classes</span>
-            <span>{activeDayCount} days</span>
-            <span>{weekWindow}</span>
-            <span>{onlineCount} online</span>
-            <span>{offlineCount} offline</span>
-            {conflictsCount > 0 && <span>{conflictsCount} conflicts</span>}
-            {gapsCount > 0 && <span>{gapsCount} long gaps</span>}
-          </div>
-        </div>
-
-        {recommendedDay && (
-          <button type="button" className="sch-summary-bar__today" onClick={onPickRecommendedDay}>
-            {DAY_SHORT[recommendedDay]}
-          </button>
-        )}
-      </div>
-
-      <div className="sch-summary-bar__next">
-        <span className="sch-summary-bar__label">Next class</span>
-        {nextClass ? (
-          <>
-            <strong>{nextClass.item.subject}</strong>
-            <span>
-              {DAY_SHORT[nextClass.day]} · {nextClass.item.startTime} - {nextClass.item.endTime}
-            </span>
-            <span>
-              {getLessonLocation(nextClass.item)}
-              {location ? ` · ${location}` : ''}
-            </span>
-            {mapHref && (
-              <Link href={mapHref} className="sch-map-link sch-map-link--compact">
-                Map
-              </Link>
-            )}
-          </>
-        ) : (
-          <span>No upcoming class</span>
-        )}
-      </div>
-    </section>
-  );
-}
-
 export default function SchedulePage() {
   const [enabledSubjects, setEnabledSubjects] = useState<Set<string>>(buildDefaultEnabled);
+  const [plannerOpen, setPlannerOpen] = useState(false);
   const [view, setView] = useState<ViewMode>('list');
   const [filterLecturer, setFilterLecturer] = useState('');
   const [filterMode, setFilterMode] = useState('');
@@ -411,14 +291,6 @@ export default function SchedulePage() {
     });
   }, []);
 
-  const enableAll = useCallback(() => {
-    setEnabledSubjects(buildDefaultEnabled());
-  }, []);
-
-  const enableBaseOnly = useCallback(() => {
-    setEnabledSubjects(new Set(BASE_SUBJECTS));
-  }, []);
-
   const enabledItems = useMemo(
     () => getFilteredItems(SCHEDULE_DATA, enabledSubjects, { lecturer: '', mode: '', day: '' }),
     [enabledSubjects],
@@ -462,8 +334,6 @@ export default function SchedulePage() {
   const lecturers = useMemo(() => getUniqueValues(enabledItems, 'lecturer'), [enabledItems]);
   const byDay = useMemo(() => groupByDay(filtered), [filtered]);
   const visibleByDay = useMemo(() => groupByDay(itemsForActiveControls), [itemsForActiveControls]);
-  const conflicts = useMemo(() => detectConflicts(itemsForActiveControls), [itemsForActiveControls]);
-  const gaps = useMemo(() => detectGaps(itemsForActiveControls), [itemsForActiveControls]);
   const nextClass = useMemo(() => getUpcomingClass(itemsForActiveControls), [itemsForActiveControls]);
 
   const dayCounts = useMemo(() => (
@@ -493,17 +363,7 @@ export default function SchedulePage() {
     setSelectedDate(new Date());
   }, [enabledItems]);
 
-  const totalClasses = itemsForActiveControls.length;
-  const onlineCount = itemsForActiveControls.filter((item) => item.mode === 'online').length;
-  const offlineCount = totalClasses - onlineCount;
-  const activeDayCount = DAYS.filter((day) => dayCounts[day] > 0).length;
   const activeElectivePairs = ELECTIVE_PAIRS.filter(({ subjects }) => subjects.some((subject) => enabledSubjects.has(subject))).length;
-  const weekWindow = totalClasses > 0
-    ? (() => {
-      const { earliest, latest } = getTimeRange(itemsForActiveControls);
-      return `${formatMinutesToTime(earliest)} - ${formatMinutesToTime(latest)}`;
-    })()
-    : 'No classes';
   const selectedDayRange = getDayTimeLabel(activeItems);
   const calendarDay = useMemo(() => getScheduleDayForDate(selectedDate), [selectedDate]);
   const calendarItems = useMemo(
@@ -519,192 +379,185 @@ export default function SchedulePage() {
 
   return (
     <div className="app-shell sch-shell">
-      <ScheduleSummaryBar
-          nextClass={nextClass}
-          totalClasses={totalClasses}
-          offlineCount={offlineCount}
-          onlineCount={onlineCount}
-          activeDayCount={activeDayCount}
-          weekWindow={weekWindow}
-          conflictsCount={conflicts.length}
-          gapsCount={gaps.length}
-          onPickRecommendedDay={() => setActiveDay(recommendedDay ?? 'all')}
-          recommendedDay={recommendedDay}
+      <NextLessonCard
+        nextClass={nextClass}
+        label="Next lesson"
+        variant="inline"
+        className="sch-page-next"
+        showMapAction
       />
 
       <Tabs value={view} onValueChange={(next) => setView(next as ViewMode)} className="sch-main">
-        <section className="card sch-controls-panel">
-          <div className="sch-controls-panel__top">
-            <TabsList className="sch-view-tabs">
-              <TabsTrigger value="list">
-                <Clock3 className="h-4 w-4" aria-hidden="true" />
-                Agenda
-              </TabsTrigger>
-              <TabsTrigger value="table">
-                <CalendarRange className="h-4 w-4" aria-hidden="true" />
-                Week grid
-              </TabsTrigger>
-              <TabsTrigger value="calendar">
-                <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                Date
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="sch-toolbar__filters">
-              <div className="sch-toolbar__field">
-                <span className="sch-toolbar__label">Instructor</span>
-                <select value={filterLecturer} onChange={(event) => setFilterLecturer(event.target.value)}>
-                  <option value="">All</option>
-                  {lecturers.map((lecturer) => (
-                    <option key={lecturer} value={lecturer}>{lecturer}</option>
-                  ))}
-                </select>
+        <div className="sch-stage">
+          <section className="card sch-planner-compact">
+            <div className="sch-planner-compact__top">
+              <div className="sch-planner-compact__copy">
+                <span className="sch-toolbar__label">Planner</span>
+                <p className="sch-planner-compact__intro">Keep only the classes you want visible in the schedule.</p>
               </div>
-              <div className="sch-toolbar__field">
-                <span className="sch-toolbar__label">Format</span>
-                <select value={filterMode} onChange={(event) => setFilterMode(event.target.value)}>
-                  <option value="">All</option>
-                  <option value="offline">Offline</option>
-                  <option value="online">Online</option>
-                </select>
+
+              <div className="sch-planner-compact__summary">
+                <span className="sch-summary-chip">{enabledSubjects.size} subjects</span>
+                <span className="sch-summary-chip">{activeElectivePairs}/{ELECTIVE_PAIRS.length} electives</span>
+                <span className="sch-summary-chip">{activeDay === 'all' ? 'All days' : activeDay}</span>
+                {selectedDayRange && <span className="sch-summary-chip">{selectedDayRange}</span>}
+              </div>
+
+              <div className="sch-planner-compact__actions">
+                <Button
+                  size="xs"
+                  appearance="outline"
+                  className="sch-planner-compact__action"
+                  onClick={() => setPlannerOpen((prev) => !prev)}
+                >
+                  {plannerOpen ? 'Done editing' : 'Edit schedule'}
+                </Button>
               </div>
             </div>
 
-            <div className="sch-toolbar__right">
-              <button type="button" className="btn btn-muted" onClick={enableAll}>
-                Default
-              </button>
-              <button type="button" className="btn btn-muted" onClick={enableBaseOnly}>
-                Base
-              </button>
-              {hasActiveFilters && (
-                <button type="button" className="btn btn-primary" onClick={resetFilters}>
-                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                  Reset
-                </button>
+            {plannerOpen ? (
+              <div className="sch-planner-compact__panel">
+                <section className="sch-filter-section">
+                  <div className="sch-filter-section__head">
+                    <div>
+                      <h3>Subjects</h3>
+                      <p>Base classes you want to keep in the week.</p>
+                    </div>
+                  </div>
+
+                  <div className="sch-chip-cloud">
+                    {BASE_SUBJECTS.map((subject) => {
+                      const active = enabledSubjects.has(subject);
+
+                      return (
+                        <button
+                          key={subject}
+                          type="button"
+                          className={`sch-chip${active ? ' sch-chip--active' : ''}`}
+                          onClick={() => toggleSubject(subject)}
+                        >
+                          <span>{subject}</span>
+                          <span className="sch-chip__count">{SUBJECT_SESSION_COUNT[subject] ?? 0}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className="sch-filter-section">
+                  <div className="sch-filter-section__head">
+                    <div>
+                      <h3>Electives</h3>
+                      <p>One visible choice per track.</p>
+                    </div>
+                  </div>
+
+                  <div className="sch-segment-stack">
+                    {ELECTIVE_PAIRS.map(({ pair, label, subjects }) => {
+                      const activeSubject = subjects.find((subject) => enabledSubjects.has(subject)) ?? null;
+
+                      return (
+                        <div key={pair} className="sch-segment-card">
+                          <div className="sch-segment-card__head">
+                            <div>
+                              <strong>{label}</strong>
+                              <span className="sch-segment-card__status">{activeSubject ?? 'Pick one'}</span>
+                            </div>
+                          </div>
+
+                          <div className="sch-segment">
+                            {subjects.map((subject) => {
+                              const active = enabledSubjects.has(subject);
+
+                              return (
+                                <button
+                                  key={subject}
+                                  type="button"
+                                  className={`sch-segment__item${active ? ' sch-segment__item--active' : ''}`}
+                                  onClick={() => toggleSubject(subject)}
+                                >
+                                  <span>{subject}</span>
+                                  <span className="sch-chip__count">{SUBJECT_SESSION_COUNT[subject] ?? 0}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="card sch-controls-panel">
+            <div className="sch-controls-panel__top">
+              <div className="sch-view-switch">
+                <span className="sch-toolbar__label">View</span>
+                <TabsList className="sch-view-tabs">
+                  <TabsTrigger value="list">
+                    <Clock3 className="h-4 w-4" aria-hidden="true" />
+                    Agenda
+                  </TabsTrigger>
+                  <TabsTrigger value="table">
+                    <CalendarRange className="h-4 w-4" aria-hidden="true" />
+                    Week
+                  </TabsTrigger>
+                  <TabsTrigger value="calendar">
+                    <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                    Calendar
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <div className="sch-toolbar__filters">
+                <div className="sch-toolbar__field">
+                  <span className="sch-toolbar__label">Instructor</span>
+                  <select value={filterLecturer} onChange={(event) => setFilterLecturer(event.target.value)}>
+                    <option value="">All</option>
+                    {lecturers.map((lecturer) => (
+                      <option key={lecturer} value={lecturer}>{lecturer}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sch-toolbar__field">
+                  <span className="sch-toolbar__label">Format</span>
+                  <select value={filterMode} onChange={(event) => setFilterMode(event.target.value)}>
+                    <option value="">All</option>
+                    <option value="offline">Offline</option>
+                    <option value="online">Online</option>
+                  </select>
+                </div>
+              </div>
+
+              {hasActiveFilters ? (
+                <div className="sch-toolbar__right">
+                  <Button size="xs" className="w-full sm:w-auto" onClick={resetFilters}>
+                    <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                    Reset
+                  </Button>
+                </div>
+              ) : (
+                <div className="sch-toolbar__right sch-toolbar__right--empty" aria-hidden="true" />
               )}
             </div>
-          </div>
 
-          {view !== 'calendar' ? (
-            <DayPicker activeDay={activeDay} dayCounts={dayCounts} onPickDay={setActiveDay} />
-          ) : (
-            <div className="sch-calendar-summary">
-              <CalendarDays className="h-4 w-4" aria-hidden="true" />
-              <span>
-                {selectedDate.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </span>
-            </div>
-          )}
-
-          <div className="sch-controls-panel__summary">
-            <span className="sch-summary-chip">{enabledSubjects.size} subjects</span>
-            <span className="sch-summary-chip">{activeElectivePairs}/{ELECTIVE_PAIRS.length} electives</span>
-            <span className="sch-summary-chip">{activeDay === 'all' ? 'All days' : activeDay}</span>
-            {selectedDayRange && <span className="sch-summary-chip">{selectedDayRange}</span>}
-          </div>
-
-          <div className="sch-controls-panel__body">
-            <section className="sch-filter-section">
-              <div className="sch-filter-section__head">
-                <h3>Subjects</h3>
+            {view !== 'calendar' ? (
+              <DayPicker activeDay={activeDay} dayCounts={dayCounts} onPickDay={setActiveDay} />
+            ) : (
+              <div className="sch-calendar-summary">
+                <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                <span>
+                  {selectedDate.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </span>
               </div>
-
-              <div className="sch-chip-cloud">
-                {BASE_SUBJECTS.map((subject) => {
-                  const active = enabledSubjects.has(subject);
-
-                  return (
-                    <button
-                      key={subject}
-                      type="button"
-                      className={`sch-chip${active ? ' sch-chip--active' : ''}`}
-                      onClick={() => toggleSubject(subject)}
-                    >
-                      <span>{subject}</span>
-                      <span className="sch-chip__count">{SUBJECT_SESSION_COUNT[subject] ?? 0}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="sch-filter-section">
-              <div className="sch-filter-section__head">
-                <h3>Electives</h3>
-              </div>
-
-              <div className="sch-segment-stack">
-                {ELECTIVE_PAIRS.map(({ pair, label, subjects }) => {
-                  const activeSubject = subjects.find((subject) => enabledSubjects.has(subject)) ?? null;
-
-                  return (
-                    <div key={pair} className="sch-segment-card">
-                      <div className="sch-segment-card__head">
-                        <div>
-                          <strong>{label}</strong>
-                          <p>{activeSubject ?? 'Not selected'}</p>
-                        </div>
-                      </div>
-
-                      <div className="sch-segment">
-                        {subjects.map((subject) => {
-                          const active = enabledSubjects.has(subject);
-
-                          return (
-                            <button
-                              key={subject}
-                              type="button"
-                              className={`sch-segment__item${active ? ' sch-segment__item--active' : ''}`}
-                              onClick={() => toggleSubject(subject)}
-                            >
-                              <span>{subject}</span>
-                              <span className="sch-chip__count">{SUBJECT_SESSION_COUNT[subject] ?? 0}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          </div>
-
-          <div className="sch-quick-links">
-            <Link className="sch-side-link" href="/map">
-              <MapPinned className="h-4 w-4" />
-              Map
-            </Link>
-            <Link className="sch-side-link" href="/gpa">
-              <BarChart3 className="h-4 w-4" />
-              GPA
-            </Link>
-            <Link className="sch-side-link" href="/help">
-              <FileText className="h-4 w-4" />
-              Guide
-            </Link>
-          </div>
-        </section>
-
-        {(conflicts.length > 0 || gaps.length > 0) && (
-          <section className="sch-alert-strip">
-            {conflicts.slice(0, 4).map((conflict, index) => (
-              <div key={`c${index}`} className="sch-warn-chip sch-warn-chip--conflict">
-                {DAY_SHORT[conflict.day]} {conflict.a.startTime}: {conflict.a.subject} vs {conflict.b.subject}
-              </div>
-            ))}
-            {gaps.slice(0, 4).map((gap, index) => (
-              <div key={`g${index}`} className="sch-warn-chip sch-warn-chip--gap">
-                {DAY_SHORT[gap.day]}: {gap.minutes} min gap
-              </div>
-            ))}
+            )}
           </section>
-        )}
 
           <TabsContent value="list">
             {filtered.length === 0 ? <EmptyState /> : <ListView byDay={byDay} />}
@@ -722,6 +575,7 @@ export default function SchedulePage() {
               items={calendarItems}
             />
           </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
@@ -764,9 +618,9 @@ function CalendarView({
         </div>
 
         {!selectedDay ? (
-          <p className="message">Pick a Monday to Saturday date to view lessons.</p>
+          <p className="message">Select a Monday to Saturday date.</p>
         ) : items.length === 0 ? (
-          <p className="message">No classes are scheduled for {selectedDay} with the current filters.</p>
+          <p className="message">No classes scheduled for {selectedDay}.</p>
         ) : (
           <div className="sch-day-cards">
             {items.map((item) => (

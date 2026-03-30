@@ -1,5 +1,3 @@
-'use client';
-
 import { type ReactNode } from 'react';
 
 type PageLayoutProps = {
@@ -8,11 +6,14 @@ type PageLayoutProps = {
   children: ReactNode;
 };
 
-export default function PageLayout({ title, children }: PageLayoutProps) {
+export default function PageLayout({ title, description, children }: PageLayoutProps) {
   return (
-    <div className="app-shell">
+    <div className="app-shell page-shell">
       <header className="page-header">
-        <h1>{title}</h1>
+        <div className="page-header__body">
+          <h1>{title}</h1>
+          {description ? <p>{description}</p> : null}
+        </div>
       </header>
 
       <section className="content">{children}</section>

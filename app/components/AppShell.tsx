@@ -1,307 +1,202 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import {
-  BarChart3,
-  Building2,
-  CalendarDays,
-  ExternalLink,
-  FileSpreadsheet,
-  FileText,
-  GraduationCap,
-  Home,
-  MapPinned,
-  Menu,
-  Target,
-  X,
-} from 'lucide-react';
+import { useMemo, type ReactNode } from 'react';
+import { ExternalLink, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  TOOL_LINKS,
+  RESOURCE_LINKS,
+  AITU_SERVICE_LINKS,
+  MOBILE_NAV_ID,
+} from '@/app/lib/navigation';
+import { isActivePath } from '@/app/lib/pathUtils';
+import { useMobileMenu } from '@/app/lib/useMobileMenu';
+import AituMark from './AituMark';
 import ThemeToggle from './ThemeToggle';
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof Home;
-  external?: boolean;
-};
-
-const TOOL_LINKS: NavItem[] = [
-  {
-    href: '/',
-    label: 'Home',
-    icon: Home,
-  },
-  {
-    href: '/schedule',
-    label: 'Schedule',
-    icon: CalendarDays,
-  },
-  {
-    href: '/map',
-    label: 'Campus Map',
-    icon: MapPinned,
-  },
-  {
-    href: '/course-grade',
-    label: 'Course Grade',
-    icon: FileSpreadsheet,
-  },
-  {
-    href: '/gpa',
-    label: 'GPA Calculator',
-    icon: BarChart3,
-  },
-  {
-    href: '/final-target',
-    label: 'Final Target',
-    icon: Target,
-  },
-  {
-    href: '/syllabus',
-    label: 'Syllabus Builder',
-    icon: FileText,
-  },
-  {
-    href: '/help',
-    label: 'AITU Guide',
-    icon: Building2,
-  },
-];
-
-const RESOURCE_LINKS: NavItem[] = [
-  {
-    href: 'https://yuujiso.github.io/aitumap/',
-    label: 'Original Map',
-    icon: ExternalLink,
-    external: true,
-  },
-  {
-    href: 'https://astanait.edu.kz',
-    label: 'AITU Site',
-    icon: ExternalLink,
-    external: true,
-  },
-];
-
-const AITU_SERVICE_LINKS = [
-  {
-    href: 'https://lms.astanait.edu.kz/',
-    label: 'AITU LMS',
-  },
-  {
-    href: 'https://du.astanait.edu.kz/',
-    label: 'AITU DU',
-  },
-] as const;
-
-const AITU_FAVICON_URL = 'https://lms.astanait.edu.kz/favicon.ico';
-
-function isActivePath(pathname: string, href: string) {
-  if (href === '/') {
-    return pathname === '/';
-  }
-
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function NavLink({
-  item,
-  pathname,
-  onNavigate,
-}: {
-  item: NavItem;
-  pathname: string;
-  onNavigate: () => void;
-}) {
-  const active = !item.external && isActivePath(pathname, item.href);
-  const Icon = item.icon;
-  const className = cn('app-sidebar__link', active && 'app-sidebar__link--active');
-
-  if (item.external) {
-    return (
-      <a
-        className={className}
-        href={item.href}
-        target="_blank"
-        rel="noreferrer"
-        onClick={onNavigate}
-      >
-        <span className="app-sidebar__link-icon">
-          <Icon className="h-4 w-4" />
-        </span>
-        <span className="app-sidebar__link-copy">
-          <strong>{item.label}</strong>
-        </span>
-      </a>
-    );
-  }
-
-  return (
-    <Link
-      href={item.href}
-      className={className}
-      aria-current={active ? 'page' : undefined}
-      onClick={onNavigate}
-    >
-      <span className="app-sidebar__link-icon">
-        <Icon className="h-4 w-4" />
-      </span>
-      <span className="app-sidebar__link-copy">
-        <strong>{item.label}</strong>
-      </span>
-    </Link>
-  );
-}
+import NavLink from './NavLink';
+import MobileMenuButton from './MobileMenuButton';
+import SidebarBackdrop from './SidebarBackdrop';
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useMobileMenu();
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  const currentItem = useMemo(
+    () => TOOL_LINKS.find((item) => isActivePath(pathname, item.href)),
+    [pathname],
+  );
+  const currentLabel = currentItem?.label ?? 'Overview';
 
-  useEffect(() => {
-    if (!mobileOpen) {
-      return undefined;
-    }
-
-    const { overflow } = document.body.style;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.body.style.overflow = overflow;
-    };
-  }, [mobileOpen]);
-
-  const currentLabel = useMemo(() => {
-    const current = TOOL_LINKS.find((item) => isActivePath(pathname, item.href));
-    return current?.label ?? 'AITU Tools';
-  }, [pathname]);
+  const handleCloseSidebar = () => setMobileOpen(false);
+  const handleToggleSidebar = () => setMobileOpen((prev) => !prev);
 
   return (
     <div className="app-frame">
-      <button
-        type="button"
-        aria-label="Close sidebar"
-        className={cn('app-sidebar-backdrop', mobileOpen && 'app-sidebar-backdrop--visible')}
-        onClick={() => setMobileOpen(false)}
+      <SidebarBackdrop isVisible={mobileOpen} onClick={handleCloseSidebar} />
+
+      <Sidebar
+        pathname={pathname}
+        mobileOpen={mobileOpen}
+        onCloseSidebar={handleCloseSidebar}
       />
 
-      <aside className={cn('app-sidebar', mobileOpen && 'app-sidebar--open')}>
-        <div className="app-sidebar__inner">
-          <div className="app-sidebar__brand-row">
-            <Link href="/" className="app-sidebar__brand" onClick={() => setMobileOpen(false)}>
-              <span className="app-sidebar__brand-badge">
-                <GraduationCap className="h-5 w-5" />
-              </span>
-              <span className="app-sidebar__brand-copy">
-                <strong>AITU Tools</strong>
-                <small>{currentLabel}</small>
-              </span>
-            </Link>
-            <button
-              type="button"
-              className="app-sidebar__close"
-              aria-label="Close menu"
-              onClick={() => setMobileOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <section className="app-sidebar__section">
-            <span className="app-sidebar__label">Tools</span>
-            <nav className="app-sidebar__nav" aria-label="Main navigation">
-              {TOOL_LINKS.map((item) => (
-                <NavLink
-                  key={item.href}
-                  item={item}
-                  pathname={pathname}
-                  onNavigate={() => setMobileOpen(false)}
-                />
-              ))}
-            </nav>
-          </section>
-
-          <section className="app-sidebar__section">
-            <span className="app-sidebar__label">Links</span>
-            <div className="app-sidebar__nav">
-              {RESOURCE_LINKS.map((item) => (
-                <NavLink
-                  key={item.href}
-                  item={item}
-                  pathname={pathname}
-                  onNavigate={() => setMobileOpen(false)}
-                />
-              ))}
-            </div>
-          </section>
-
-          <div className="app-sidebar__footer">
-            <div className="app-sidebar__theme">
-              <div>
-                <span className="app-sidebar__label">Appearance</span>
-              </div>
-              <ThemeToggle />
-            </div>
-
-            <div className="app-sidebar__services">
-              <span className="app-sidebar__label">AITU</span>
-              <div className="app-sidebar__service-list">
-                {AITU_SERVICE_LINKS.map((item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="app-sidebar__service-link"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <Image
-                      src={AITU_FAVICON_URL}
-                      alt="AITU"
-                      width={20}
-                      height={20}
-                      unoptimized
-                      className="app-sidebar__service-logo"
-                    />
-                    <span className="app-sidebar__service-copy">
-                      <strong>{item.label}</strong>
-                    </span>
-                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
       <div className="app-frame__body">
-        <header className="app-mobile-bar">
-          <button
-            type="button"
-            className="app-mobile-bar__menu"
-            aria-label="Open sidebar"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-          <div className="app-mobile-bar__copy">
-            <strong>AITU Tools</strong>
-            <span>{currentLabel}</span>
-          </div>
-          <ThemeToggle />
-        </header>
+        <MobileHeader
+          currentLabel={currentLabel}
+          mobileOpen={mobileOpen}
+          onToggleSidebar={handleToggleSidebar}
+        />
 
         <main id="main" className="app-frame__content">
           {children}
         </main>
       </div>
     </div>
+  );
+}
+
+type SidebarProps = {
+  pathname: string;
+  mobileOpen: boolean;
+  onCloseSidebar: () => void;
+};
+
+function Sidebar({ pathname, mobileOpen, onCloseSidebar }: SidebarProps) {
+  return (
+    <aside
+      id={MOBILE_NAV_ID}
+      className={cn('app-sidebar', mobileOpen && 'app-sidebar--open')}
+      aria-label="Sidebar"
+    >
+      <div className="app-sidebar__inner">
+        <SidebarBrand onClose={onCloseSidebar} />
+
+        <section className="app-sidebar__section">
+          <span className="app-sidebar__label">Pages</span>
+          <nav className="app-sidebar__nav" aria-label="Main navigation">
+            {TOOL_LINKS.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                onNavigate={onCloseSidebar}
+              />
+            ))}
+          </nav>
+        </section>
+
+        <section className="app-sidebar__section">
+          <span className="app-sidebar__label">Portals</span>
+          <div className="app-sidebar__nav">
+            {AITU_SERVICE_LINKS.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                className="app-sidebar__service-link"
+                onClick={onCloseSidebar}
+              >
+                <span className="app-sidebar__service-logo" aria-hidden="true">
+                  <AituMark className="h-5 w-5" />
+                </span>
+                <span className="app-sidebar__service-copy">
+                  <strong>{item.label}</strong>
+                </span>
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section className="app-sidebar__section">
+          <span className="app-sidebar__label">Campus links</span>
+          <div className="app-sidebar__nav">
+            {RESOURCE_LINKS.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                onNavigate={onCloseSidebar}
+              />
+            ))}
+          </div>
+        </section>
+
+        <SidebarFooter />
+      </div>
+    </aside>
+  );
+}
+
+type SidebarBrandProps = {
+  onClose: () => void;
+};
+
+function SidebarBrand({ onClose }: SidebarBrandProps) {
+  return (
+    <div className="app-sidebar__brand-row">
+      <Link href="/" className="app-sidebar__brand" onClick={onClose}>
+        <span className="app-sidebar__brand-badge">
+          <GraduationCap className="h-5 w-5" />
+        </span>
+        <span className="app-sidebar__brand-copy">
+          <strong>AITU Tools</strong>
+        </span>
+      </Link>
+      <button
+        type="button"
+        className="app-sidebar__close"
+        aria-label="Close menu"
+        onClick={onClose}
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+function SidebarFooter() {
+  return (
+    <div className="app-sidebar__footer">
+      <div className="app-sidebar__theme">
+        <div>
+          <span className="app-sidebar__label">Theme</span>
+        </div>
+        <ThemeToggle />
+      </div>
+    </div>
+  );
+}
+
+type MobileHeaderProps = {
+  currentLabel: string;
+  mobileOpen: boolean;
+  onToggleSidebar: () => void;
+};
+
+function MobileHeader({ currentLabel, mobileOpen, onToggleSidebar }: MobileHeaderProps) {
+  return (
+    <header className="app-mobile-bar">
+      <MobileMenuButton isOpen={mobileOpen} onClick={onToggleSidebar} />
+      <div className="app-mobile-bar__copy">
+        <strong>{currentLabel}</strong>
+      </div>
+      <ThemeToggle />
+    </header>
   );
 }

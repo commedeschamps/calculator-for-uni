@@ -35,6 +35,9 @@ With nodemon:
 npm run dev:nodemon
 ```
 
+Use `nodemon` only when you are editing project config files like `next.config.mjs`, `tailwind.config.ts`, `postcss.config.js`, or `tsconfig.json`.
+For normal app/page/component work, use `npm run dev` so Next.js can handle hot reload itself without restarting the dev server.
+
 Page-based routes:
 - `/course-grade`
 - `/syllabus`
@@ -44,7 +47,6 @@ Page-based routes:
 
 `/` redirects to `/course-grade`.
 
-Legacy static implementation is preserved in `legacy/`.
 
 ## Build for production
 

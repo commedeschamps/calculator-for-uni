@@ -204,6 +204,43 @@ export function getScheduleDayForDate(date: Date): DayOfWeek | null {
   return JS_DAY_TO_SCHEDULE_DAY[date.getDay()] ?? null;
 }
 
+export function getUpcomingClass(
+  items: ScheduleItem[],
+  date: Date = new Date(),
+): { day: DayOfWeek; item: ScheduleItem } | null {
+  const grouped = groupByDay(items);
+  const today = getScheduleDayForDate(date);
+  const nowMinutes = date.getHours() * 60 + date.getMinutes();
+
+  if (today) {
+    const todayItems = grouped[today] ?? [];
+    const upcomingToday = todayItems.find((item) => parseTimeToMinutes(item.endTime) >= nowMinutes);
+
+    if (upcomingToday) {
+      return {
+        day: today,
+        item: upcomingToday,
+      };
+    }
+  }
+
+  const startIndex = today ? DAYS.indexOf(today) : -1;
+
+  for (let offset = 1; offset <= DAYS.length; offset += 1) {
+    const day = DAYS[(startIndex + offset + DAYS.length) % DAYS.length];
+    const firstItem = grouped[day]?.[0];
+
+    if (firstItem) {
+      return {
+        day,
+        item: firstItem,
+      };
+    }
+  }
+
+  return null;
+}
+
 export function getRecommendedDay(items: ScheduleItem[], date: Date = new Date()): DayOfWeek | null {
   const daysWithItems = DAYS.filter((day) => items.some((item) => item.day === day));
   if (daysWithItems.length === 0) {

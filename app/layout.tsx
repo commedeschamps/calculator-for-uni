@@ -26,7 +26,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
         />
       </head>
       <body>
-        <a href="#main" className="skip-link">Skip to content</a>
         <ThemeProvider>
           <ToastProvider>
             <GlobalNumberInputFocus />

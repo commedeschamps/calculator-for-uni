@@ -1,13 +1,18 @@
 {
   "watch": [
-    "app",
     "next.config.mjs",
-    "package.json"
+    "package.json",
+    "postcss.config.js",
+    "tailwind.config.ts",
+    "tsconfig.json",
+    "nodemon.json"
   ],
-  "ext": "js,mjs,ts,tsx,css,json",
+  "ext": "js,mjs,ts,json",
   "ignore": [
-    ".next",
-    "node_modules"
+    ".next/**",
+    "node_modules/**"
   ],
+  "delay": "300",
+  "signal": "SIGTERM",
   "exec": "next dev -p 3000"
 }
