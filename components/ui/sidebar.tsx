@@ -120,7 +120,7 @@ const CollapsibleSection = ({
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="p-2">{children}</div>
+            <div className="p-4 pt-2">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -211,7 +211,7 @@ const Sidebar = ({
 
       <aside
         className={cn(
-          "sticky top-24 hidden h-[calc(100vh-7rem)] w-72 shrink-0 overflow-hidden rounded-3xl border border-border bg-card text-foreground shadow-sm md:flex md:flex-col",
+          "sticky top-24 hidden h-[calc(100vh-7rem)] w-64 shrink-0 overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-sm md:flex md:flex-col",
           sidebarClassName,
         )}
       >

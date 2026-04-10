@@ -191,7 +191,7 @@ type MobileHeaderProps = {
 
 function MobileHeader({ currentLabel, mobileOpen, onToggleSidebar }: MobileHeaderProps) {
   return (
-    <header className="app-mobile-bar">
+    <header className="app-mobile-bar flex items-center justify-between px-4 py-3 border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-40 lg:hidden">
       <MobileMenuButton isOpen={mobileOpen} onClick={onToggleSidebar} />
       <div className="app-mobile-bar__copy">
         <strong>{currentLabel}</strong>

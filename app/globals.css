@@ -564,7 +564,7 @@ select:focus-visible {
 }
 
 .app-mobile-bar {
-  display: none;
+  /* controlled by tailwind lg:hidden */
 }
 
 .app-frame__content {
@@ -2965,6 +2965,40 @@ html.theme-transitioning *::after {
   font-weight: 600;
   line-height: 1.4;
   min-width: 0;
+}
+
+.dept-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dept-row__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dept-row__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface));
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.dept-row__desc {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
 }
 
 .dept-row__info {
@@ -6954,6 +6988,13 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+.sch-next-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
 .sch-next-card__label,
 .sch-next-card__day {
   display: inline-flex;
@@ -6976,6 +7017,49 @@ textarea:focus {
   border-color: color-mix(in srgb, var(--accent) 18%, var(--border));
 }
 
+.sch-next-card__state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, var(--bg));
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sch-next-card__state--current {
+  color: #0f766e;
+  background: color-mix(in srgb, #ccfbf1 72%, var(--surface));
+  border-color: color-mix(in srgb, #14b8a6 28%, var(--border));
+}
+
+.sch-next-card__state--break {
+  color: #0369a1;
+  background: color-mix(in srgb, #e0f2fe 72%, var(--surface));
+  border-color: color-mix(in srgb, #38bdf8 26%, var(--border));
+}
+
+.sch-next-card__state--window {
+  color: #9a3412;
+  background: color-mix(in srgb, #ffedd5 74%, var(--surface));
+  border-color: color-mix(in srgb, #fb923c 28%, var(--border));
+}
+
+.sch-next-card__state--upcoming {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+
+.sch-next-card__state--empty {
+  color: var(--text-secondary);
+}
+
 .sch-next-card strong {
   font-family: var(--font-display);
   font-size: clamp(1.2rem, 2vw, 1.55rem);
@@ -6984,11 +7068,16 @@ textarea:focus {
 }
 
 .sch-next-card__time,
+.sch-next-card__subcopy,
 .sch-next-card__empty {
   margin: 0;
   color: var(--text-secondary);
   font-size: 0.84rem;
   line-height: 1.55;
+}
+
+.sch-next-card__subcopy {
+  margin-top: -0.15rem;
 }
 
 .sch-next-card__meta {
@@ -7017,9 +7106,27 @@ textarea:focus {
 }
 
 .sch-next-card--inline {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .sch-next-card--inline {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .sch-next-card--inline .sch-next-card__content {
+    flex: 1 1 auto;
+  }
+
+  .sch-next-card--inline .sch-next-card__actions {
+    margin-left: auto;
+    justify-content: flex-end;
+    align-self: flex-start;
+  }
 }
 
 .sch-page-next {
@@ -7476,6 +7583,30 @@ textarea:focus {
   gap: 0.85rem;
   align-items: start;
   min-width: max-content;
+}
+
+.sch-grid--cols-1 {
+  grid-template-columns: repeat(1, minmax(17rem, 1fr));
+}
+
+.sch-grid--cols-2 {
+  grid-template-columns: repeat(2, minmax(17rem, 1fr));
+}
+
+.sch-grid--cols-3 {
+  grid-template-columns: repeat(3, minmax(17rem, 1fr));
+}
+
+.sch-grid--cols-4 {
+  grid-template-columns: repeat(4, minmax(17rem, 1fr));
+}
+
+.sch-grid--cols-5 {
+  grid-template-columns: repeat(5, minmax(17rem, 1fr));
+}
+
+.sch-grid--cols-6 {
+  grid-template-columns: repeat(6, minmax(17rem, 1fr));
 }
 
 .sch-day-col {

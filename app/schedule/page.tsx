@@ -12,19 +12,20 @@ import NextLessonCard from '@/app/components/NextLessonCard';
 import { Button } from '@/components/tailgrids/core/button';
 import BasicDatePicker from '@/components/ui/calendar-1';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCurrentTime } from '@/app/lib/useCurrentTime';
+import { useEnabledScheduleSubjects } from '@/app/lib/useEnabledScheduleSubjects';
 import { extractCampusLocation } from '../lib/campusMap';
+import { BASE_SUBJECTS, ELECTIVE_MAP, ELECTIVE_PAIRS } from '../lib/schedulePreferences';
 import {
   type DayOfWeek,
   type ScheduleItem,
   DAYS,
   DAY_SHORT,
   SCHEDULE_DATA,
-  PAIR_LABELS,
   getFilteredItems,
+  getNextLessonSnapshot,
   getScheduleDayForDate,
-  getUpcomingClass,
   getRecommendedDay,
-  getUniqueSubjects,
   getUniqueValues,
   groupByDay,
 } from '../lib/schedule';
@@ -32,85 +33,10 @@ import {
 type ViewMode = 'table' | 'list' | 'calendar';
 type DayFilter = DayOfWeek | 'all';
 
-const { base: BASE_SUBJECTS, electives: ELECTIVE_MAP } = getUniqueSubjects(SCHEDULE_DATA);
-
-const ELECTIVE_PAIRS: { pair: string; label: string; subjects: string[] }[] = (() => {
-  const map = new Map<string, string[]>();
-  ELECTIVE_MAP.forEach((pair, subject) => {
-    if (!map.has(pair)) {
-      map.set(pair, []);
-    }
-    map.get(pair)!.push(subject);
-  });
-
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([pair, subjects]) => ({
-      pair,
-      label: PAIR_LABELS[pair] || pair,
-      subjects: subjects.sort(),
-    }));
-})();
-
 const SUBJECT_SESSION_COUNT = SCHEDULE_DATA.reduce<Record<string, number>>((acc, item) => {
   acc[item.subject] = (acc[item.subject] ?? 0) + 1;
   return acc;
 }, {});
-
-const STORAGE_KEY = 'sch-enabled-subjects';
-
-function buildDefaultEnabled(): Set<string> {
-  const defaults = new Set(BASE_SUBJECTS);
-
-  for (const { subjects } of ELECTIVE_PAIRS) {
-    const firstSubject = subjects[0];
-    if (firstSubject) {
-      defaults.add(firstSubject);
-    }
-  }
-
-  return defaults;
-}
-
-function normalizeEnabledSubjects(subjects: Iterable<string>): Set<string> {
-  const incoming = new Set(subjects);
-  const normalized = new Set<string>();
-
-  for (const subject of BASE_SUBJECTS) {
-    if (incoming.has(subject)) {
-      normalized.add(subject);
-    }
-  }
-
-  for (const { subjects: pairSubjects } of ELECTIVE_PAIRS) {
-    const selected = pairSubjects.find((subject) => incoming.has(subject));
-    if (selected) {
-      normalized.add(selected);
-    }
-  }
-
-  return normalized;
-}
-
-function loadPersistedSubjects(): Set<string> {
-  if (typeof window === 'undefined') {
-    return buildDefaultEnabled();
-  }
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const arr = JSON.parse(stored) as string[];
-      if (Array.isArray(arr)) {
-        return normalizeEnabledSubjects(arr);
-      }
-    }
-  } catch {
-    // Ignore malformed local state and fall back to defaults.
-  }
-
-  return buildDefaultEnabled();
-}
 
 function buildMapHref(item: ScheduleItem): string | null {
   const location = extractCampusLocation(item.classroom);
@@ -240,33 +166,16 @@ function DayPicker({
 }
 
 export default function SchedulePage() {
-  const [enabledSubjects, setEnabledSubjects] = useState<Set<string>>(buildDefaultEnabled);
+  const now = useCurrentTime();
+  const [enabledSubjects, setEnabledSubjects, subjectsReady] = useEnabledScheduleSubjects();
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [view, setView] = useState<ViewMode>('list');
   const [filterLecturer, setFilterLecturer] = useState('');
   const [filterMode, setFilterMode] = useState('');
   const [activeDay, setActiveDay] = useState<DayFilter>('all');
   const [didAutoPickDay, setDidAutoPickDay] = useState(false);
-  const [subjectsReady, setSubjectsReady] = useState(false);
   const [recommendedDay, setRecommendedDay] = useState<DayOfWeek | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-
-  useEffect(() => {
-    setEnabledSubjects(loadPersistedSubjects());
-    setSubjectsReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!subjectsReady) {
-      return;
-    }
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(enabledSubjects)));
-    } catch {
-      // Ignore storage failures in private / restricted environments.
-    }
-  }, [enabledSubjects, subjectsReady]);
 
   const toggleSubject = useCallback((subject: string) => {
     setEnabledSubjects((prev) => {
@@ -287,9 +196,9 @@ export default function SchedulePage() {
         next.add(subject);
       }
 
-      return normalizeEnabledSubjects(next);
+      return next;
     });
-  }, []);
+  }, [setEnabledSubjects]);
 
   const enabledItems = useMemo(
     () => getFilteredItems(SCHEDULE_DATA, enabledSubjects, { lecturer: '', mode: '', day: '' }),
@@ -334,7 +243,10 @@ export default function SchedulePage() {
   const lecturers = useMemo(() => getUniqueValues(enabledItems, 'lecturer'), [enabledItems]);
   const byDay = useMemo(() => groupByDay(filtered), [filtered]);
   const visibleByDay = useMemo(() => groupByDay(itemsForActiveControls), [itemsForActiveControls]);
-  const nextClass = useMemo(() => getUpcomingClass(itemsForActiveControls), [itemsForActiveControls]);
+  const lessonSnapshot = useMemo(
+    () => getNextLessonSnapshot(enabledItems, now),
+    [enabledItems, now],
+  );
 
   const dayCounts = useMemo(() => (
     DAYS.reduce<Record<DayOfWeek, number>>((acc, day) => {
@@ -380,7 +292,7 @@ export default function SchedulePage() {
   return (
     <div className="app-shell sch-shell">
       <NextLessonCard
-        nextClass={nextClass}
+        lessonSnapshot={lessonSnapshot}
         label="Next lesson"
         variant="inline"
         className="sch-page-next"

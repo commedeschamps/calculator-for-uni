@@ -19,12 +19,12 @@ export default function SuccessToastNotification({
   onAction,
 }: SuccessToastNotificationProps) {
   return (
-    <div className="w-full rounded-xl border border-border bg-card p-3 text-sm shadow-sm">
-      <div className="flex items-start gap-3">
+    <div className="relative w-full rounded-xl border border-border bg-card p-4 pr-14 text-sm shadow-sm">
+      <div className="flex flex-col items-start gap-3 sm:flex-row">
         <CheckCircle2 className="mt-0.5 h-[1.125rem] w-[1.125rem] shrink-0 text-[var(--success)]" />
         <div className="min-w-0 flex-1">
-          <h3 className="font-medium text-foreground">{title}</h3>
-          <p className="text-muted-foreground">{description}</p>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground">{description}</p>
           {actionLabel && onAction ? (
             <button
               type="button"
@@ -39,7 +39,7 @@ export default function SuccessToastNotification({
           type="button"
           aria-label="Dismiss notification"
           onClick={onClose}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95"
+          className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95"
         >
           <X className="h-4 w-4" />
         </button>
